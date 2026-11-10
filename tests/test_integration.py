@@ -195,17 +195,15 @@ def test_bot_and_workflow_integration_with_mock_hardware():
     assert mock_driver.mouse_down is False
 
 
-def test_headless_dashboard_and_bot_lifecycle():
+def test_headless_dashboard_and_bot_lifecycle(tk_root):
     """
     Validates full MacroDashboard initialization and bot lifecycle
     within a headless Tkinter window.
     """
-    try:
-        root = tk.Tk()
-    except tk.TclError:
+    if tk_root is None:
         pytest.skip("Tkinter display not available")
 
-    root.withdraw()
+    win = tk.Toplevel(tk_root)
     mock_driver = MockInputDriver()
     input_mgr = InputManager(driver=mock_driver)
     mock_grabber = MockScreenGrabber()
@@ -228,7 +226,7 @@ def test_headless_dashboard_and_bot_lifecycle():
         )
 
     dashboard = MacroDashboard(
-        root,
+        win,
         api=api_mock,
         info=user_info,
         bot_factory=integrated_bot_factory,
