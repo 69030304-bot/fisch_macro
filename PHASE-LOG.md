@@ -282,3 +282,29 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Backend import `python -c "import main"`: **PASS**.
   - DB Viewer import `python -c "import view_database"`: **PASS**.
 - **Status:** **COMPLETED**
+
+---
+
+## Phase 9 — Release Preparation
+
+- **Phase:** Phase 9 — Release Preparation
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030450 (นายกิตติศักดิ์ พัฒนนิติศักดิ์ — QA / Documentation) & Team Coordinator
+- **Active Branch:** `docs/69030450-phase9-release-prep` (derived from `develop`)
+- **Task Description:**
+  - Validate all one-click Windows launcher scripts (`setup.bat`, `start_app.bat`, `start_backend.bat`, `view_database.bat`).
+  - Author comprehensive end-user manual in `USER_GUIDE.md` covering system requirements, setup, auth, Roblox configuration, calibration, hotkeys, failsafe, and troubleshooting.
+  - Author full release history in `CHANGELOG.md` covering all features, refactorings, and optimizations in v1.0.0.
+  - Overhaul `README.md` to reflect the clean modular architecture, team roster, quickstart steps, API documentation, and test metrics.
+  - Prepare final audit summary and request explicit user authorization before merging `develop` into `main`.
+- **Changes Made:**
+  - `USER_GUIDE.md`: Comprehensive user manual for desktop users.
+  - `CHANGELOG.md`: Detailed changelog for v1.0.0.
+  - `README.md`: Modernized documentation with team roles, architecture diagram, and test badges.
+  - Updated `docs/ROADMAP.md`, `PHASE-LOG.md`, `HANDOFF.md`.
+- **Test Results:**
+  - `pytest tests/`: **53/53 PASS** (100% passing with 0 warnings).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Total test suite: **63/63 passing** across all modules.
+  - All launcher scripts, import statements, and configurations verified intact.
+- **Status:** **COMPLETED (Awaiting Approval for main Merge)**
