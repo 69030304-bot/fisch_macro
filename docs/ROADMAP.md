@@ -2,7 +2,7 @@
 
 **Project:** Fisch Macro  
 **Strategy:** Preserve & Refactor (Incremental Modular Evolution)  
-**Current Phase:** Phase 3 — Fishing Automation (COMPLETED) ➔ Next: Phase 4 (Vision and Input)  
+**Current Phase:** Phase 4 — Vision and Input (COMPLETED) ➔ Next: Phase 5 (Database and Data Layer)  
 **Last Updated:** 2026-11-11  
 
 ---
@@ -14,7 +14,7 @@ flowchart TD
     P0["Phase 0: Repository Audit<br/><b>[COMPLETED]</b>"] --> P1["Phase 1: Architecture & Team Setup<br/><b>[COMPLETED]</b>"]
     P1 --> P2["Phase 2: Core Refactoring<br/><b>[COMPLETED]</b>"]
     P2 --> P3["Phase 3: Fishing Automation<br/><b>[COMPLETED]</b>"]
-    P3 --> P4["Phase 4: Vision and Input<br/><b>[PENDING]</b>"]
+    P3 --> P4["Phase 4: Vision and Input<br/><b>[COMPLETED]</b>"]
     P4 --> P5["Phase 5: Database & Data Layer<br/><b>[PENDING]</b>"]
     P5 --> P6["Phase 6: Modern GUI<br/><b>[PENDING]</b>"]
     P6 --> P7["Phase 7: Integration<br/><b>[PENDING]</b>"]
@@ -95,14 +95,18 @@ flowchart TD
 ---
 
 ### Phase 4 — Vision and Input
-- **Status:** **PENDING**
+- **Status:** **COMPLETED**
 - **Lead Member:** 69030304 (Automation Core)
 - **Collaborator:** 69030450 (QA / Testing)
 - **Objectives:**
-  - Separate `ScreenGrabber` interface with `mss` and `PIL` adapters.
-  - Extract pure vision functions (`color_mask`, `runs_of`, `choose`) into a testable `vision` module.
-  - Create input driver abstraction (`Win32InputDriver` and `MockInputDriver`).
-  - Test input cleanup and emergency stop guarantees.
+  - Create dedicated `vision/` package with `MssScreenGrabber`, `PilScreenGrabber`, and `MockScreenGrabber`.
+  - Extract pure detection routines (`color_mask`, `runs_of`, `choose`, `analyze`, `measure`, `centers`, `row_stride`, `detect`).
+  - Extract EMA predictive tracking into `vision.tracking.Track`.
+  - Author automated unit tests for synthetic minigame frame detection and tracking.
+- **Deliverables:**
+  - `vision/` package (`capture.py`, `detection.py`, `tracking.py`, `__init__.py`).
+  - `tests/test_vision.py` (5 tests, 100% pass).
+  - Total automated test suite: 28/28 passing across all modules.
 
 ---
 

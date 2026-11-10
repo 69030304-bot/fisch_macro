@@ -3,7 +3,7 @@
 **Project:** Fisch Macro  
 **Handoff Date:** 2026-11-11  
 **Author:** Member 69030304 (นายชยภัทร พุทธศรีเมือง — Python Application / Automation Core)  
-**Current Active Branch:** `feature/69030304-fishing-automation`  
+**Current Active Branch:** `feature/69030304-vision-input`  
 **Base Branch:** `team/69030304-python-automation`  
 **Integration Target:** `develop`  
 
@@ -14,51 +14,51 @@
 - **Phase 0 (Repository Audit):** **COMPLETED**
 - **Phase 1 (Architecture & Team Setup):** **COMPLETED**
 - **Phase 2 (Core Refactoring):** **COMPLETED**
-- **Phase 3 (Fishing Automation):** **COMPLETED & VERIFIED**
+- **Phase 3 (Fishing Automation):** **COMPLETED**
+- **Phase 4 (Vision and Input):** **COMPLETED & VERIFIED**
 
-The fishing automation logic has been cleanly modularized into the `automation/` package. The core control algorithms (`ReelController` and `SigmaDeltaModulator`) and discrete fishing sequence operations (`EquipRodOperation`, `CastOperation`, `BiteWaitOperation`, `ReelOperation`) have been isolated, unit-tested, and integrated into `fisch_macro.py`.
+The computer vision and capture subsystems have been extracted into the `vision/` package. The multi-tier screen capture driver (`ScreenGrabber` with `mss`, `PIL`, and synthetic `MockScreenGrabber`), color segmentation, clustering (`runs_of`, `choose`), forward-projected tracking (`Track`), and analysis routines are fully modularized and covered by automated unit tests.
 
-All 23 automated tests across `tests/` pass with 100% success rate in 1.63 seconds. All existing timing parameters, algorithms, and configuration backwards-compatibility are preserved.
+All 28 automated tests across `tests/` pass with a 100% success rate in 1.63 seconds. All existing timing parameters, algorithms, calibration dialogs, preview displays, and configuration backwards-compatibility are preserved.
 
 ---
 
 ## 2. Git Status and Branch Mapping
 
 ```
-* feature/69030304-fishing-automation (Active Task Branch, ready to merge into team branch)
-  team/69030304-python-automation     (Member 69030304 Base Branch)
-  develop                             (Integration Branch @ 8b9ba8b)
-  team/69030450-qa-docs               (Member 69030450 Base Branch @ 8b9ba8b)
-  team/69030377-ux-ui                 (Member 69030377 Base Branch @ 49f746d)
-  team/69030343-backend-db            (Member 69030343 Base Branch @ 49f746d)
-  team/69030208-gui-db                (Member 69030208 Base Branch @ 49f746d)
-  main                                (Protected Production @ 49f746d)
+* feature/69030304-vision-input   (Active Task Branch, ready to merge into team branch)
+  team/69030304-python-automation (Member 69030304 Base Branch)
+  develop                         (Integration Branch @ 8b9ba8b)
+  team/69030450-qa-docs           (Member 69030450 Base Branch @ 8b9ba8b)
+  team/69030377-ux-ui             (Member 69030377 Base Branch @ 49f746d)
+  team/69030343-backend-db        (Member 69030343 Base Branch @ 49f746d)
+  team/69030208-gui-db            (Member 69030208 Base Branch @ 49f746d)
+  main                            (Protected Production @ 49f746d)
 ```
 
 ---
 
 ## 3. Files Created / Modified in this Task
 
-### New Automation Modules (`automation/`):
-- `automation/__init__.py`: Package exports for automation components.
-- `automation/controller.py`: `ReelController` (PD control with integral anti-windup and direction inversion) and `SigmaDeltaModulator` (duty-cycle mouse pulse generator).
-- `automation/operations.py`: `AutomationContext`, `EquipRodOperation`, `CastOperation`, `BiteWaitOperation`, `ReelOperation`.
-- `automation/workflow.py`: `FishingWorkflow` cyclic loop orchestrator.
+### New Vision Modules (`vision/`):
+- `vision/__init__.py`: Package exports for vision components.
+- `vision/capture.py`: `BaseScreenGrabber`, `MssScreenGrabber`, `PilScreenGrabber`, `MockScreenGrabber`, `ScreenGrabber` (alias `Grabber`).
+- `vision/detection.py`: `color_mask`, `runs_of`, `choose`, `analyze`, `measure`, `centers`, `row_stride`, `detect`.
+- `vision/tracking.py`: `Track` class (EMA position and velocity estimation).
 
 ### New Test Suites:
-- `tests/test_automation.py`: 8 unit tests covering `ReelController` position and velocity errors, direction inversion, `SigmaDeltaModulator` duty cycles, `EquipRodOperation`, `CastOperation`, `BiteWaitOperation`, and full workflow simulation.
+- `tests/test_vision.py`: 5 unit tests covering `MockScreenGrabber`, synthetic minigame detection, brown bar detection, row stride sampling, and `Track` reset/expiry.
 
 ### Modified Files:
-- `fisch_macro.py`: Refactored `Bot.reel()` to consume `ReelController` and `SigmaDeltaModulator`.
-- `docs/FEATURES.md`: Updated automation operations status to **Working**.
-- `docs/ROADMAP.md`: Marked Phase 3 as **COMPLETED**.
-- `PHASE-LOG.md`: Added detailed Phase 3 execution entry.
+- `fisch_macro.py`: Replaced monolithic vision declarations with `vision` imports.
+- `docs/ROADMAP.md`: Marked Phase 4 as **COMPLETED**.
+- `PHASE-LOG.md`: Added detailed Phase 4 execution entry.
 
 ---
 
 ## 4. Tests Executed & Actual Results
 
-### Automated Pytest Suite (23/23 PASS):
+### Automated Pytest Suite (28/28 PASS):
 Command: `.venv/bin/pytest tests/ -v`
 ```
 tests/test_automation.py::test_reel_controller_centered PASSED
@@ -79,13 +79,18 @@ tests/test_core.py::test_input_manager_mock PASSED
 tests/test_core.py::test_macro_engine_lifecycle PASSED
 tests/test_core.py::test_macro_engine_emergency_stop PASSED
 tests/test_service_compat.py::test_service_all PASSED
+tests/test_vision.py::test_mock_screen_grabber PASSED
+tests/test_vision.py::test_synthetic_minigame_detection PASSED
+tests/test_vision.py::test_synthetic_brown_bar_detection PASSED
+tests/test_vision.py::test_row_stride PASSED
+tests/test_vision.py::test_track_reset_and_expiry PASSED
 tests/test_vision_math.py::test_color_mask PASSED
 tests/test_vision_math.py::test_runs_of PASSED
 tests/test_vision_math.py::test_choose PASSED
 tests/test_vision_math.py::test_track_ema PASSED
 tests/test_vision_math.py::test_centers PASSED
 
-============================== 23 passed in 1.63s ==============================
+============================== 28 passed in 1.63s ==============================
 ```
 
 ### Standalone Backend Suite:
@@ -95,8 +100,8 @@ Command: `.venv/bin/python test_service.py` ➔ **10/10 PASS**
 
 ## 5. Next Recommended Action
 
-1. Merge `feature/69030304-fishing-automation` into `team/69030304-python-automation` and push to remote.
-2. Proceed to **Phase 4 (Vision and Input)** under Member 69030304:
-   - Extract screen capture (`ScreenGrabber` with `mss` and `PIL` adapters) and color detection routines into a standalone `vision/` package.
-   - Decouple calibration tools from inline Tkinter code.
-   - Add unit tests with synthetic fixture frames for minigame bar detection.
+1. Merge `feature/69030304-vision-input` into `team/69030304-python-automation` and push to remote.
+2. Proceed to **Phase 5 (Database and Data Layer)** under Member 69030343 (`team/69030343-backend-db`):
+   - Audit and refine repository patterns in `service.py` and `database.py`.
+   - Maintain data integrity and test migrations if schemas evolve.
+   - Verify Google Sheets sync reliability and error states.

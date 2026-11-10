@@ -112,3 +112,30 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Standalone `python test_service.py`: **10/10 PASS**.
   - Module import `python -c "import fisch_macro"`: **PASS**.
 - **Status:** **COMPLETED**
+
+## Phase 4 — Vision and Input
+
+- **Phase:** Phase 4 — Vision and Input
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030304 (นายชยภัทร พุทธศรีเมือง — Python Application / Automation Core)
+- **Active Branch:** `feature/69030304-vision-input` (derived from `team/69030304-python-automation`)
+- **Task Description:**
+  - Create decoupled `vision` package (`capture.py`, `detection.py`, `tracking.py`, `__init__.py`).
+  - Extract and modularize multi-tier screen capture (`MssScreenGrabber`, `PilScreenGrabber`, `MockScreenGrabber`, `ScreenGrabber`).
+  - Modularize computer vision algorithms: `color_mask`, `runs_of`, `choose`, `analyze`, `measure`, `centers`, `row_stride`, `detect`.
+  - Modularize predictive tracking (`Track` class with EMA velocity and forward projection).
+  - Update `fisch_macro.py` to import from `vision`, preserving exact preview, calibration, and reel detection behavior.
+  - Create automated unit test suite in `tests/test_vision.py` verifying synthetic minigame frame detection and tracking.
+- **Changes Made:**
+  - `vision/capture.py`: `BaseScreenGrabber`, `MssScreenGrabber`, `PilScreenGrabber`, `MockScreenGrabber`, `ScreenGrabber` (alias `Grabber`).
+  - `vision/detection.py`: `color_mask`, `runs_of`, `choose`, `analyze`, `measure`, `centers`, `row_stride`, `detect`.
+  - `vision/tracking.py`: `Track` class.
+  - `vision/__init__.py`: Package exports.
+  - `fisch_macro.py`: Replaced inline vision declarations with `vision` imports.
+  - `tests/test_vision.py`: 5 unit tests for mock grabber, synthetic minigame detection, brown bar detection, row stride, and track expiry.
+  - Updated `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **28/28 PASS** (100% passing across automation, core, vision, vision math, and service suites).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Module import `python -c "import fisch_macro"`: **PASS**.
+- **Status:** **COMPLETED**

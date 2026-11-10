@@ -102,126 +102,22 @@ def rgb_hex(c):
     return "#%02x%02x%02x" % tuple(int(v) for v in c)
 
 
-# ---------------------------------------------------------------- จับภาพ + ตรวจจับ
-class Grabber:
-    """ใช้ mss ถ้ามี (เร็ว) ไม่งั้นใช้ ImageGrab. สร้างแยกต่อ thread"""
-
-    def __init__(self):
-        self.sct = None
-        if mss is not None:
-            try:
-                self.sct = mss.mss()
-            except Exception:
-                self.sct = None
-
-    def grab(self, region, stride=1):
-        """คืน array RGB (int16) ของพื้นที่ โดยเก็บทุก stride แถว"""
-        x, y, w, h = region
-        if self.sct is not None:
-            try:
-                shot = self.sct.grab({"left": x, "top": y, "width": w, "height": h})
-                return np.asarray(shot)[::stride, :, 2::-1].astype(np.int16)
-            except Exception:
-                self.sct = None
-        img = ImageGrab.grab(bbox=(x, y, x + w, y + h), all_screens=True).convert("RGB")
-        return np.asarray(img)[::stride].astype(np.int16)
-
-
-BAR_GAP = 60   # พิกเซลที่ยอมให้ขาดช่วงในแถบ (ตอนปลา/ไอคอนบังแถบ) แล้วยังนับเป็นแถบเดียวกัน
-FISH_GAP = 2
-
-
-def color_mask(arr, color, tol):
-    return np.all(np.abs(arr - np.array(color, dtype=np.int16)) <= tol, axis=2)
-
-
-def runs_of(mask, gap):
-    """แยกคอลัมน์ที่มีสีตรงเป็นก้อนๆ คืนลิสต์ (ซ้าย, ขวา, จุดศูนย์ถ่วง, น้ำหนัก, จำนวนคอลัมน์)"""
-    counts = mask.sum(axis=0)
-    cols = np.nonzero(counts)[0]
-    if cols.size == 0:
-        return []
-    out = []
-    for g in np.split(cols, np.nonzero(np.diff(cols) > gap + 1)[0] + 1):
-        w = counts[g]
-        out.append((int(g[0]), int(g[-1]), float((g * w).sum() / w.sum()), int(w.sum()), int(g.size)))
-    return out
-
-
-def choose(runs, pred, min_cols=3):
-    """เลือกก้อนที่ใช่: ตัดก้อนเล็กทิ้ง แล้วเลือกก้อนที่ใกล้ตำแหน่งที่คาดไว้ (ถ้าไม่มีให้เลือกก้อนใหญ่สุด)"""
-    runs = [r for r in runs if r[4] >= min_cols]
-    if not runs:
-        return None
-    max_w = max(r[3] for r in runs)
-    cands = [r for r in runs if r[3] >= 0.4 * max_w]
-    if pred is None:
-        return max(cands, key=lambda r: r[3])
-    return min(cands, key=lambda r: abs(r[2] - pred))
-
-
-def analyze(arr, cfg, tol=None):
-    """ใช้กับ Preview/หน้าสอบเทียบ: คืน (ก้อนปลา, ก้อนแถบ, mask ปลา, mask แถบขาว, mask แถบน้ำตาล)"""
-    tol = cfg["tolerance"] if tol is None else tol
-    fm = color_mask(arr, cfg["fish_color"], tol)
-    bm1 = color_mask(arr, cfg["bar_color"], tol)
-    bm2 = color_mask(arr, cfg["bar_color2"], tol) if cfg.get("bar_color2") else None
-    bm = (bm1 | bm2) if bm2 is not None else bm1
-    return choose(runs_of(fm, FISH_GAP), None), choose(runs_of(bm, BAR_GAP), None), fm, bm1, bm2
-
-
-def measure(arr, cfg, pred_fish=None, pred_bar=None):
-    """ใช้ในบอท: ตรวจปลา/แถบ โดยใช้ตำแหน่งที่คาดไว้ช่วยเลือกก้อน"""
-    tol = cfg["tolerance"]
-    fm = color_mask(arr, cfg["fish_color"], tol)
-    bm = color_mask(arr, cfg["bar_color"], tol)
-    if cfg.get("bar_color2"):
-        bm |= color_mask(arr, cfg["bar_color2"], tol)
-    return (choose(runs_of(fm, FISH_GAP), pred_fish),
-            choose(runs_of(bm, BAR_GAP), pred_bar))
-
-
-def centers(f, b):
-    fish = f[2] if f else None
-    bar = (b[0] + b[1]) / 2 if b else None
-    return fish, bar
-
-
-def row_stride(region):
-    return max(1, region[3] // 24)
-
-
-def detect(cfg, grabber):
-    arr = grabber.grab(cfg["region"], row_stride(cfg["region"]))
-    f, b = measure(arr, cfg)
-    return centers(f, b)
-
-
-class Track:
-    """เก็บตำแหน่งล่าสุด + ความเร็ว (EMA) ไว้คาดการณ์ล่วงหน้า"""
-    TAU = 0.05
-
-    def __init__(self):
-        self.x = None
-        self.v = 0.0
-        self.t = 0.0
-
-    def update(self, z, t):
-        if self.x is None or t - self.t > 0.3:
-            self.x, self.v, self.t = z, 0.0, t
-            return
-        dt = max(t - self.t, 1e-3)
-        a = 1.0 - math.exp(-dt / self.TAU)
-        self.v += a * ((z - self.x) / dt - self.v)
-        self.x, self.t = z, t
-
-    def fresh(self, now, age=0.15):
-        return self.x is not None and now - self.t <= age
-
-    def pos(self, t):
-        if self.x is None:
-            return None
-        return self.x + self.v * min(max(t - self.t, 0.0), 0.12)
+# ---------------------------------------------------------------- จับภาพ + ตรวจจับ (via vision)
+from vision import (
+    BAR_GAP,
+    FISH_GAP,
+    Grabber,
+    ScreenGrabber,
+    Track,
+    analyze,
+    centers,
+    choose,
+    color_mask,
+    detect,
+    measure,
+    row_stride,
+    runs_of,
+)
 
 
 # ---------------------------------------------------------------- บอท
