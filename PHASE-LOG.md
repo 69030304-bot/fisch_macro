@@ -213,3 +213,40 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Macro app import `python -c "import fisch_macro"`: **PASS**.
   - GUI package import `python -c "import gui"`: **PASS**.
 - **Status:** **COMPLETED**
+
+---
+
+## Phase 7 — Integration
+
+- **Phase:** Phase 7 — Integration
+- **Date:** 2026-11-11
+- **Responsible Member:** All Members (69030304 Python Application & Automation, 69030208 GUI, 69030450 QA)
+- **Active Branch:** `feature/phase7-integration` (derived from `develop`)
+- **Task Description:**
+  - Integrate `fisch_macro.Bot` directly with `automation.FishingWorkflow`, `core.CancellationToken`, `core.EventBus`, and `core.InputManager`.
+  - Wire UI callbacks and reactive event subscriptions (`phase_changed`, `cycle_changed`, `status`, `log`, `catch`).
+  - Support dependency injection of `grabber` and `input_mgr` in `Bot` for mockability during testing.
+  - Polish countdown and rest delay behavior in `automation/workflow.py` for smooth execution with arbitrary delay settings.
+  - Resolve `mss.MSS()` deprecation warning in `vision/capture.py`.
+  - Author comprehensive integration test suite `tests/test_integration.py` covering:
+    1. Package exports and layer contracts.
+    2. End-to-end user authentication and service methods (register, login, me, export_users_rows).
+    3. Bot and FishingWorkflow execution with mock hardware.
+    4. Headless MacroDashboard lifecycle with live stats and mock bot.
+    5. Atomic configuration persistence and recovery.
+    6. Failsafe watchdog activation on (0, 0) cursor coordinate.
+    7. Standalone entrypoints importability (`main.py`, `fisch_macro.py`, `view_database.py`, `ui_kit.py`).
+- **Changes Made:**
+  - `fisch_macro.py`: Refactored `Bot` into integrated adapter delegating to `FishingWorkflow`.
+  - `automation/workflow.py`: Refined countdown and rest delay handling with graceful float/int support.
+  - `vision/capture.py`: Replaced deprecated `mss.mss()` with `mss.MSS()`.
+  - `tests/test_integration.py`: Created 7 comprehensive integration tests.
+  - Updated `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **49/49 PASS** (100% passing with 0 warnings).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Total test suite: **59/59 passing** across all modules.
+  - App import `python -c "import fisch_macro"`: **PASS**.
+  - Backend import `python -c "import main"`: **PASS**.
+  - DB Viewer import `python -c "import view_database"`: **PASS**.
+- **Status:** **COMPLETED**

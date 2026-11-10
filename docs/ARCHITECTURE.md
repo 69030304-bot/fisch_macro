@@ -78,14 +78,14 @@ graph TD
   - Bot lifecycle is decoupled: `MacroDashboard` accepts an optional `bot_factory` parameter, enabling mock injection during automated testing.
   - Configuration persistence utilizes atomic `ConfigManager` from `data.config`.
 
-### 2.2 Application Layer (`app/`)
-- **Primary Owner:** 69030304 (Python Application)
-- **Collaborator:** 69030450 (QA / Docs)
+### 2.2 Application & Integration Layer
+- **Primary Owner:** 69030304 (Python Application & Automation Core)
+- **Collaborators:** 69030208 (GUI) / 69030450 (QA / Docs)
 - **Components:**
-  - `ApplicationController`: Coordinates UI events with macro engine lifecycles.
-  - `HotkeyManager`: Manages global keybinds (F6, F7, F8) safely with background thread routing.
-  - `HeartbeatWorker`: Periodic client session validity check against `/me`.
-  - `ConfigManager`: Manages persistence of `fisch_config.json` and `fisch_client.json`.
+  - `fisch_macro.Bot`: Unified application bridge connecting `MacroDashboard` directly to `automation.FishingWorkflow`, `core.CancellationToken`, `core.EventBus`, and `core.InputManager`.
+  - Global Hotkeys: Managed via `pynput.keyboard.GlobalHotKeys` for F6 (Toggle start/stop), F7 (Emergency Stop), and F8 (Calibration snapshot).
+  - Client Heartbeat: Background daemon thread verifying token validity against `/me` with exponential tolerance.
+  - `ConfigManager`: Atomic configuration manager ensuring safe JSON persistence and automatic recovery.
 
 ### 2.3 Core Layer (`core/`)
 - **Primary Owner:** 69030304 (Automation Engine)

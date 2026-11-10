@@ -53,13 +53,25 @@ class FishingWorkflow:
         try:
             # Phase: Countdown start delay
             start_delay = float(self.config.get("start_delay", 5))
-            ctx.log(f"Starting in {start_delay:.0f}s - Switch to Roblox window")
-            self.current_phase = "start"
-            ctx.set_status("นับถอยหลัง... คลิกกลับไปหน้าเกม")
-            event_bus.publish("phase_changed", "start")
-
-            if not ctx.wait(start_delay):
-                return
+            if start_delay > 0:
+                self.current_phase = "start"
+                event_bus.publish("phase_changed", "start")
+                ctx.set_status("นับถอยหลัง... คลิกกลับไปหน้าเกม")
+                if start_delay >= 1.0:
+                    for left in range(int(start_delay), 0, -1):
+                        if token.is_cancelled:
+                            return
+                        ctx.set_status(f"เริ่มใน {left} วินาที... (สลับไปหน้าต่างเกม)")
+                        ctx.log(f"นับถอยหลัง: {left}")
+                        if not ctx.wait(1.0):
+                            return
+                    rem = start_delay - int(start_delay)
+                    if rem > 0 and not ctx.wait(rem):
+                        return
+                else:
+                    ctx.log(f"Starting in {start_delay:.2f}s")
+                    if not ctx.wait(start_delay):
+                        return
 
             # Phase: Equip rod once on startup
             if self.config.get("equip_on_start", True) and not token.is_cancelled:
@@ -74,7 +86,7 @@ class FishingWorkflow:
             while not token.is_cancelled:
                 self.cycle_count += 1
                 event_bus.publish("cycle_changed", self.cycle_count)
-                ctx.log(f"--- Cycle #{self.cycle_count} ---")
+                ctx.log(f"--- รอบที่ {self.cycle_count} ---")
 
                 # Step 1: Cast rod
                 self.current_phase = "cast"
@@ -98,13 +110,13 @@ class FishingWorkflow:
 
                 # Step 3: Reel minigame
                 if bite_detected:
-                    ctx.log("Minigame detected! Reeling fish...")
+                    ctx.log("มินิเกมเริ่ม!")
                     self.current_phase = "reel"
                     event_bus.publish("phase_changed", "reel")
 
                     if reel_op:
                         dur, fps = reel_op.execute(ctx)
-                        ctx.log(f"Minigame completed ({dur:.1f}s, avg {fps:.0f} fps)")
+                        ctx.log(f"จบมินิเกม ({dur:.1f}s, {fps:.0f} fps)")
                     else:
                         ctx.wait(3.0)
 
@@ -113,13 +125,13 @@ class FishingWorkflow:
                     event_bus.publish("catch", self.cycle_count)
 
                 elif not token.is_cancelled:
-                    ctx.log("No bite detected within timeout. Resetting cycle.")
+                    ctx.log("รอปลากินหมดเวลา เหวี่ยงใหม่")
 
                 # Step 4: Rest before next cycle
                 self.current_phase = "rest"
-                ctx.set_status("พักก่อนเหวี่ยงรอบถัดไป")
-                event_bus.publish("phase_changed", "rest")
                 loop_delay = float(self.config.get("loop_delay", 2.0))
+                ctx.set_status(f"พัก {loop_delay:.1f} วิ ก่อนรอบถัดไป")
+                event_bus.publish("phase_changed", "rest")
                 if not ctx.wait(loop_delay):
                     break
 

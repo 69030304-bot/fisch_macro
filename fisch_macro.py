@@ -54,10 +54,25 @@ except ImportError:
 
 import ui_kit as ui
 
-# ---------------------------------------------------------------- Hardware Input (via core.input)
-from automation.controller import ReelController, SigmaDeltaModulator
-from core.input import (
+# ---------------------------------------------------------------- Modular Layers (automation, core, data)
+from automation import (
+    AutomationContext,
+    BiteWaitOperation,
+    CastOperation,
+    EquipRodOperation,
+    FishingWorkflow,
+    ReelController,
+    ReelOperation,
+    SigmaDeltaModulator,
+)
+from core import (
+    CancellationToken,
+    EventBus,
+    InputManager,
+    MacroEngine,
+    MacroState,
     SCAN,
+    StateManager,
     cursor_pos,
     input_manager,
     key_event,
@@ -127,29 +142,51 @@ from vision import (
 )
 
 
-# ---------------------------------------------------------------- บอท
+# ---------------------------------------------------------------- บอท (Integrated with automation & core)
 class Bot(threading.Thread):
-    def __init__(self, cfg, log, on_catch, on_finish):
+    def __init__(self, cfg, log, on_catch, on_finish, grabber=None, input_mgr=None):
         super().__init__(daemon=True)
         self.cfg = cfg
         self.log = log
         self.on_catch = on_catch
         self.on_finish = on_finish
         self.stop_event = threading.Event()
+        self.token = CancellationToken()
+        self.input_mgr = input_mgr or input_manager
         self.holding = False
-        self.grabber = None
+        self.grabber = grabber
         self.live = ""
         self.phase = "idle"      # idle / start / cast / wait / reel / rest
         self.cycle = 0
 
+        self.event_bus = EventBus()
+        self.event_bus.subscribe("phase_changed", self._on_phase_changed)
+        self.event_bus.subscribe("cycle_changed", self._on_cycle_changed)
+        self.event_bus.subscribe("status", self._on_status)
+        self.event_bus.subscribe("log", self._on_log)
+
+    def _on_phase_changed(self, phase):
+        self.phase = phase
+
+    def _on_cycle_changed(self, cycle):
+        self.cycle = cycle
+
+    def _on_status(self, text):
+        self.live = text
+
+    def _on_log(self, text):
+        self.log(text)
+
     def stop(self):
         self.stop_event.set()
+        self.token.cancel()
+        self.input_mgr.release_all()
 
     def stopped(self):
-        return self.stop_event.is_set()
+        return self.stop_event.is_set() or self.token.is_cancelled
 
     def check_failsafe(self):
-        if cursor_pos() == (0, 0):
+        if self.input_mgr.is_failsafe_triggered() or cursor_pos() == (0, 0):
             self.log("FAILSAFE: เมาส์อยู่มุมซ้ายบน หยุดทำงาน")
             self.stop()
 
@@ -161,157 +198,94 @@ class Bot(threading.Thread):
 
     def hold(self, state):
         if state != self.holding:
-            mouse_button(state)
+            self.input_mgr.mouse_button(state)
             self.holding = state
 
     def cast(self):
-        self.phase = "cast"
-        self.live = "เหวี่ยงเบ็ด"
-        self.hold(True)
-        self.wait(self.cfg["cast_hold"])
-        self.hold(False)
-        self.log("เหวี่ยงเบ็ด")
+        op = CastOperation()
+        ctx = AutomationContext(
+            config=self.cfg,
+            input_mgr=self.input_mgr,
+            token=self.token,
+            event_bus=self.event_bus,
+            grabber=self.grabber,
+            log_fn=self.log,
+            status_fn=self._on_status,
+        )
+        return op.execute(ctx)
 
     def wait_for_bite(self):
-        cfg = self.cfg
-        self.phase = "wait"
-        self.live = "รอปลากิน / กด Shake"
-        nav = cfg["use_shake"] and cfg["nav_each_cycle"]
-        found = False
-        if nav:
-            self.wait(0.3)
-            tap("\\")                      # เปิด UI Navigation
-        try:
-            start = time.time()
-            while not self.stopped() and time.time() - start < cfg["bite_timeout"]:
-                if cfg["use_shake"]:
-                    tap("enter")
-                fish, bar = detect(cfg, self.grabber)
-                if fish is not None and bar is not None:
-                    found = True
-                    break
-                self.wait(0.1)
-        finally:
-            if nav:
-                tap("\\")                  # ปิด UI Navigation ให้ครบคู่เสมอ
-                self.wait(0.15)
-        return found
+        op = BiteWaitOperation(detect_fn=detect)
+        ctx = AutomationContext(
+            config=self.cfg,
+            input_mgr=self.input_mgr,
+            token=self.token,
+            event_bus=self.event_bus,
+            grabber=self.grabber,
+            log_fn=self.log,
+            status_fn=self._on_status,
+        )
+        return op.execute(ctx)
 
     def reel(self):
-        cfg = self.cfg
-        self.phase = "reel"
-        kp, kd, lat = cfg["kp"], cfg["kd"], cfg["latency"]
-        region = cfg["region"]
-        stride = row_stride(region)
-        ft, bt = Track(), Track()
-        bar_w = None
-        ctrl = ReelController(kp=cfg["kp"], kd=cfg["kd"], latency=cfg["latency"], invert=cfg["invert"])
-        modulator = SigmaDeltaModulator(initial_acc=0.5)
-        trace = []
-
-        start = time.time()
-        last_t = start
-        misses = 0
-
-        while not self.stopped() and time.time() - start < cfg["reel_timeout"]:
-            t = time.time()
-            dt = t - last_t
-            last_t = t
-            self.check_failsafe()
-
-            arr = self.grabber.grab(region, stride=stride)
-            f_runs, b_runs, *_ = analyze(arr, cfg)
-            fx, bx = centers(f_runs, b_runs)
-
-            bw = measure(b_runs)
-            if bw:
-                bar_w = bw if bar_w is None else 0.85 * bar_w + 0.15 * bw
-
-            if fx is None and bx is None:
-                misses += 1
-                if misses > 10:
-                    break
-            else:
-                misses = 0
-
-            fx_p, f_vx = ft.update(fx, t, lat)
-            bx_p, b_vx = bt.update(bx, t, 0.0)
-
-            half = (bar_w or 80) / 2.0
-            u = ctrl.compute(fx_p, bx_p, f_vx, b_vx, half, dt=dt)
-            press = modulator.step(u)
-            self.hold(press)
-
-            err_disp = (fx_p - bx_p) if (fx_p is not None and bx_p is not None) else 0.0
-            self.live = f"ดึงปลา: err={err_disp:+.0f}px  u={u:.2f}  {'[กด]' if press else '[ปล่อย]'}"
-
-            if cfg["trace"]:
-                trace.append((t - start, fx, bx, fx_p, bx_p, f_vx, b_vx, half, u, 1 if press else 0))
-
-            time.sleep(0.006)
-
-        self.hold(False)
-        self.phase = "rest"
-        self.live = "จบมินิเกม"
-        self.log("จบมินิเกม")
-
-        if cfg["trace"] and trace:
-            try:
-                with open(TRACE_FILE, "w", newline="", encoding="utf-8") as fp:
-                    w = csv.writer(fp)
-                    w.writerow(["t", "fish_raw", "bar_raw", "fish_pred", "bar_pred",
-                                "fish_vx", "bar_vx", "half_bar", "u", "pressed"])
-                    w.writerows(trace)
-                self.log(f"บันทึก trace: {len(trace)} เฟรม")
-            except Exception as e:
-                self.log(f"บันทึก trace ไม่ได้: {e}")
+        op = ReelOperation(
+            measure_fn=measure,
+            track_factory=Track,
+            row_stride_fn=row_stride,
+            trace_file=TRACE_FILE,
+        )
+        ctx = AutomationContext(
+            config=self.cfg,
+            input_mgr=self.input_mgr,
+            token=self.token,
+            event_bus=self.event_bus,
+            grabber=self.grabber,
+            log_fn=self.log,
+            status_fn=self._on_status,
+        )
+        return op.execute(ctx)
 
     def run(self):
         self.log("บอทเริ่มทำงาน")
-        self.grabber = Grabber()
+        if self.grabber is None:
+            self.grabber = Grabber()
 
-        if self.cfg["start_delay"] > 0:
-            self.phase = "start"
-            for left in range(self.cfg["start_delay"], 0, -1):
-                if self.stopped():
-                    break
-                self.live = f"เริ่มใน {left} วินาที... (สลับไปหน้าต่างเกม)"
-                self.log(f"นับถอยหลัง: {left}")
-                self.wait(1.0)
-
-        if not self.stopped() and self.cfg["equip_on_start"]:
-            tap(self.cfg["rod_slot"])
-            self.log(f"กดช่องเบ็ด ({self.cfg['rod_slot']})")
-            self.wait(0.5)
-
+        ops = {
+            "grabber": self.grabber,
+            "equip": EquipRodOperation(),
+            "cast": CastOperation(),
+            "bite": BiteWaitOperation(detect_fn=detect),
+            "reel": ReelOperation(
+                measure_fn=measure,
+                track_factory=Track,
+                row_stride_fn=row_stride,
+                trace_file=TRACE_FILE,
+            ),
+        }
+        workflow = FishingWorkflow(
+            config=self.cfg,
+            operations=ops,
+            on_catch=self.on_catch,
+            on_finish=self._handle_finish,
+        )
         try:
-            while not self.stopped():
-                self.cycle += 1
-                self.log(f"--- รอบที่ {self.cycle} ---")
-                self.cast()
-                if self.stopped():
-                    break
-                if self.wait_for_bite():
-                    self.log("มินิเกมเริ่ม!")
-                    self.reel()
-                    self.on_catch()
-                else:
-                    self.log("รอปลากินหมดเวลา เหวี่ยงใหม่")
-                if self.stopped():
-                    break
-                self.phase = "rest"
-                self.live = f"พัก {self.cfg['loop_delay']} วิ ก่อนรอบถัดไป"
-                self.wait(self.cfg["loop_delay"])
+            workflow.run(self.token, self.input_mgr, self.event_bus)
         finally:
-            self.hold(False)
-            self.phase = "idle"
-            self.live = "หยุดทำงานแล้ว"
-            if self.grabber:
-                try:
-                    self.grabber.close()
-                except Exception:
-                    pass
-            self.on_finish()
+            self._handle_finish()
+
+    def _handle_finish(self):
+        self.hold(False)
+        self.phase = "idle"
+        self.live = "หยุดทำงานแล้ว"
+        if self.grabber:
+            try:
+                self.grabber.close()
+            except Exception:
+                pass
+        cb = self.on_finish
+        if cb:
+            self.on_finish = None
+            cb()
 
 
 # ---------------------------------------------------------------- สไตล์ / การตั้งค่า UI

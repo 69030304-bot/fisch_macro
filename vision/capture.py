@@ -36,7 +36,7 @@ class MssScreenGrabber(BaseScreenGrabber):
         self._sct = None
         if mss is not None:
             try:
-                self._sct = mss.mss()
+                self._sct = mss.MSS() if hasattr(mss, "MSS") else mss.mss()
             except Exception:
                 self._sct = None
 

@@ -90,4 +90,5 @@
 | Automated Macro Engine Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `StateManager`, `EventBus`, `CancellationToken`, and `MacroEngine`. |
 | Automated Automation Tests | QA / Automation | **Working** | 69030450 | `tests/test_automation.py` tests for `ReelController`, `SigmaDeltaModulator`, and operations. |
 | Automated GUI Tests | QA / Presentation | **Working** | 69030450 / 69030208 | `tests/test_gui.py`: 6 tests validating client configuration persistence, API client error mapping, DateField leap-year validation, async worker execution, log tagging, and MacroDashboard mock bot lifecycle. |
+| Automated Integration Tests | QA / All | **Working** | 69030450 / All | `tests/test_integration.py`: 7 comprehensive tests covering auth lifecycle, headless dashboard bot execution, FishingWorkflow mock hardware simulation, failsafe watchdog, and script entrypoints. |
 | CI Pipeline Configuration | QA / DevOps | **Missing** | 69030450 | GitHub Actions workflow to run automated tests on pull requests. |
