@@ -125,6 +125,9 @@ class BiteWaitOperation:
             if not ctx.wait(0.3):
                 return False
             ctx.input_mgr.tap("\\")
+            # Give UI navigation time to open before the first Shake input.
+            if not ctx.wait(0.5):
+                return False
 
         try:
             start_time = time.time()
