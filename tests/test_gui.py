@@ -21,16 +21,7 @@ from gui.dashboard import MacroDashboard, load_config
 from gui.widgets import DateField, Tip
 
 
-@pytest.fixture
-def tk_root():
-    """Create a headless/withdrawn Tk root instance for safe GUI unit tests."""
-    root = tk.Tk()
-    root.withdraw()
-    yield root
-    try:
-        root.destroy()
-    except Exception:
-        pass
+
 
 
 def test_client_cfg_load_and_save(tmp_path):
@@ -149,6 +140,9 @@ def test_macro_dashboard_log_tagging():
 
 def test_macro_dashboard_init_and_lifecycle(tk_root):
     """Verify MacroDashboard widget initialization and mocked bot lifecycle."""
+    if tk_root is None:
+        pytest.skip("Tkinter display not available")
+    win = tk.Toplevel(tk_root)
     api_mock = MagicMock(spec=ApiClient)
     user_info = {"id": 1, "username": "AdminPro", "role": "admin", "nickname": "TheBoss"}
 
@@ -177,7 +171,7 @@ def test_macro_dashboard_init_and_lifecycle(tk_root):
             self.phase = "idle"
             self.on_finish()
 
-    app = MacroDashboard(tk_root, api=api_mock, info=user_info, bot_factory=MockBot)
+    app = MacroDashboard(win, api=api_mock, info=user_info, bot_factory=MockBot)
     assert app.user == "AdminPro"
     assert app.role == "admin"
     assert app.cur_tol() >= 5
@@ -193,8 +187,4 @@ def test_macro_dashboard_init_and_lifecycle(tk_root):
 
     app.stop()
     assert app.bot.is_alive() is False
-    if app.hk:
-        try:
-            app.hk.stop()
-        except Exception:
-            pass
+    app.close()
