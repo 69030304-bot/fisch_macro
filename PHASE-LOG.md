@@ -307,4 +307,31 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Standalone `python test_service.py`: **10/10 PASS**.
   - Total test suite: **63/63 passing** across all modules.
   - All launcher scripts, import statements, and configurations verified intact.
-- **Status:** **COMPLETED (Awaiting Approval for main Merge)**
+- **Status:** **COMPLETED**
+
+---
+
+## Release Hotfix & Continuous Delivery Build (v1.0.1)
+
+- **Phase:** CI/CD & Standalone Executable Packaging
+- **Date:** 2026-11-11
+- **Responsible Member:** All Team Members & QA Coordinator (69030450)
+- **Active Branch:** `fix/ci-windows-encoding-and-exe-build`
+- **Task Description:**
+  - Diagnose and resolve GitHub Actions CI failures on Windows (cp1252 charmap encoding) and Ubuntu 3.10 (pynput X11 thread hook abort).
+  - Implement automated PyInstaller workflow for continuous delivery of standalone Windows executables (`FischMacro.exe` and `FischBackend.exe`).
+  - Provide direct artifact downloads in GitHub Actions and attach release assets to GitHub Releases.
+  - Update user guide and readme to document zero-dependency standalone usage.
+- **Changes Made:**
+  - `gui/dashboard.py`: Guarded `GlobalHotKeys` against `CI` and `HEADLESS` environments to eliminate X11 hook aborts in headless runners.
+  - `test_service.py`: Configured `sys.stdout` and `sys.stderr` to `utf-8` on Windows.
+  - `tests/test_gui.py`: Added explicit hotkey listener cleanup in GUI lifecycle tests.
+  - `.github/workflows/ci.yml`: Added `PYTHONIOENCODING: "utf-8"`, `PYTHONUTF8: "1"`, expanded triggers, and added `build-windows` PyInstaller packaging job.
+  - `USER_GUIDE.md` & `README.md`: Added instructions for standalone `.exe` downloads.
+  - `.gitignore`: Added `*.spec` to ignore build specifications.
+- **Test Results:**
+  - `pytest tests/`: **53/53 PASS**.
+  - `python test_service.py`: **10/10 PASS**.
+  - Standalone PyInstaller compile test: **PASS** (`FischMacro.exe` & `FischBackend.exe`).
+- **Status:** **COMPLETED**
+
