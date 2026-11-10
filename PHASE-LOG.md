@@ -176,3 +176,40 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - FastAPI app import `python -c "import main"`: **PASS**.
   - Macro app import `python -c "import fisch_macro"`: **PASS**.
 - **Status:** **COMPLETED**
+
+---
+
+## Phase 6 — Modern GUI
+
+- **Phase:** Phase 6 — Modern GUI
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030208 (นายฤทธิพร วงค์ป้อม — GUI & DB Integration)
+- **Collaborator:** 69030377 (นางสาวพิชชาภา ภูววิไลเมธา — UX/UI Design)
+- **Active Branch:** `feature/69030208-modern-gui` (derived from `team/69030208-gui-db`)
+- **Task Description:**
+  - Create dedicated `gui/` package decoupling client networking, custom widgets, authentication modals, account dialogs, and macro dashboard.
+  - Implement `gui/client.py` (`ApiClient`, `ClientError`, `load_client_cfg`, `save_client_cfg`, `run_bg`) for non-blocking asynchronous REST interaction.
+  - Implement `gui/widgets.py` (`Tip` tooltip and `DateField` 3-dropdown selector with leap-year day validation).
+  - Implement `gui/auth_window.py` (`LoginWindow`) implementing Sign In, Register, and Forgot Password tabs with async network calls.
+  - Implement `gui/admin_dialog.py` (`AccountDialog`) providing user profile, self password change, admin user management table (`ttk.Treeview`), active status toggle, password reset, and Google Sheet sync trigger.
+  - Implement `gui/dashboard.py` (`MacroDashboard`, aliased as `App`) with header stats, start/stop/save controls, camera preview, fullscreen calibration overlay with loupe, two-way slider settings, and tagged event console.
+  - Refactor `fisch_macro.py` from 1,751 lines down to 414 lines by delegating GUI classes to `gui/` while maintaining 100% backward compatibility for all external callers and launchers.
+  - Author comprehensive UX/UI design specification in `docs/UI_SPEC.md`.
+  - Create automated unit test suite in `tests/test_gui.py` covering client configuration, API errors, DateField validation, async workers, log categorization, and mock bot lifecycle.
+- **Changes Made:**
+  - `gui/client.py`: Decoupled REST client, client config persistence, and `run_bg` helper.
+  - `gui/widgets.py`: `Tip` and `DateField` custom widgets.
+  - `gui/auth_window.py`: `LoginWindow` authentication portal.
+  - `gui/admin_dialog.py`: `AccountDialog` user and admin management dialog.
+  - `gui/dashboard.py`: `MacroDashboard` main application window.
+  - `gui/__init__.py`: Package exports.
+  - `fisch_macro.py`: Replaced monolithic GUI code with clean façade delegating to `gui/`, preserving existing imports.
+  - `docs/UI_SPEC.md`: Complete UX/UI design documentation.
+  - `tests/test_gui.py`: 6 automated tests validating all GUI subsystem components.
+  - Updated `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **42/42 PASS** (100% passing across automation, core, database, gui, vision, vision math, and service suites).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Macro app import `python -c "import fisch_macro"`: **PASS**.
+  - GUI package import `python -c "import gui"`: **PASS**.
+- **Status:** **COMPLETED**

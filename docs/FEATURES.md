@@ -45,17 +45,19 @@
 
 ---
 
-## 3. Desktop GUI & User Experience
+## 3. Desktop GUI & User Experience (Phase 6)
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
-| Authentication UI | Presentation | **Working** | 69030377 / 69030208 | Theme `LOGIN` (indigo/peach), tabs for Sign In, Register, Forgot. |
-| Main Dashboard Window | Presentation | **Working** | 69030377 / 69030208 | Header, live stats (fish count, runtime, cycles), status chip. |
-| Custom Rounded Widgets | Presentation | **Working** | 69030377 / 69030208 | `ui_kit.py`: Canvas-drawn anti-aliased cards, buttons, tabs. |
-| Live Camera Preview | Presentation / Vision | **Working** | 69030208 | Displays captured minigame slice with color mask overlays. |
-| Calibration Tool | Presentation / Vision | **Working** | 69030208 | Fullscreen overlay, loupe zoom, color picker, region bounding box. |
-| Settings Tab | Presentation | **Working** | 69030208 | Sliders and text fields for timing, PID constants, and tolerances. |
-| Log Viewer Tab | Presentation | **Working** | 69030208 | Thread-safe queue log display with color tags. |
+| Authentication UI | Presentation | **Working** | 69030377 / 69030208 | `gui.auth_window.LoginWindow`: Theme `LOGIN` (indigo/peach), tabs for Sign In, Register, Forgot Password. Asynchronous network requests via `run_bg`. |
+| Main Dashboard Window | Presentation | **Working** | 69030377 / 69030208 | `gui.dashboard.MacroDashboard` (aliased as `App`): Header with live stats (fish count, runtime, cycles), status chip, start/stop/save controls. |
+| Custom Rounded Widgets | Presentation | **Working** | 69030377 / 69030208 | `ui_kit.py`: Canvas-drawn anti-aliased cards, buttons, tabs, sliders, toggles. `gui.widgets`: Tooltip `Tip`, 3-part `DateField` with leap-year validation. |
+| Live Camera Preview | Presentation / Vision | **Working** | 69030208 | `gui.dashboard`: Displays captured minigame slice with color mask overlays at ~30 FPS. |
+| Calibration Tool | Presentation / Vision | **Working** | 69030208 | `gui.dashboard`: Fullscreen overlay, loupe zoom, color picker, region bounding box selection. |
+| Settings Tab | Presentation | **Working** | 69030208 | `gui.dashboard`: Two-way bound sliders and inputs for timing, PID constants, and color tolerances. |
+| Log Viewer Tab | Presentation | **Working** | 69030208 | `gui.dashboard`: Thread-safe queue log display with timestamped color tags (`INF`, `WRN`, `ERR`, `FISH`). |
+| Account & Admin Modal | Presentation / Admin | **Working** | 69030208 / 69030343 | `gui.admin_dialog.AccountDialog`: Profile display, self password change, admin user management table (`ttk.Treeview`), active toggle, password reset, and Google Sheet sync trigger. |
+| Asynchronous API Client | Presentation / Net | **Working** | 69030208 | `gui.client`: `ApiClient`, `load_client_cfg`, `save_client_cfg`, non-blocking worker runner `run_bg`. |
 | Database Viewer GUI | Admin Tools | **Working** | 69030208 / 69030343 | `view_database.py` standalone tool with raw SQL console. |
 
 ---
@@ -87,4 +89,5 @@
 | Automated Control Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `Track` EMA, `InputManager`, and failsafe triggers. |
 | Automated Macro Engine Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `StateManager`, `EventBus`, `CancellationToken`, and `MacroEngine`. |
 | Automated Automation Tests | QA / Automation | **Working** | 69030450 | `tests/test_automation.py` tests for `ReelController`, `SigmaDeltaModulator`, and operations. |
+| Automated GUI Tests | QA / Presentation | **Working** | 69030450 / 69030208 | `tests/test_gui.py`: 6 tests validating client configuration persistence, API client error mapping, DateField leap-year validation, async worker execution, log tagging, and MacroDashboard mock bot lifecycle. |
 | CI Pipeline Configuration | QA / DevOps | **Missing** | 69030450 | GitHub Actions workflow to run automated tests on pull requests. |

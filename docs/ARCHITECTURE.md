@@ -21,7 +21,7 @@ Fisch Macro is an automated desktop assistant for the Roblox game *Fisch*. The s
 ```mermaid
 graph TD
     subgraph "Desktop Client Process"
-        UI[Presentation Layer: Tkinter + ui_kit]
+        UI[Presentation Layer: Tkinter + gui/ + ui_kit]
         AppCtrl[Application Controller]
         Core[Core Layer: Macro Engine & State Manager]
         Auto[Automation Layer: Fishing Workflow]
@@ -62,17 +62,21 @@ graph TD
 
 ## 2. Layered Architecture & Responsibilities
 
-### 2.1 Presentation Layer (`ui/`)
+### 2.1 Presentation Layer (`gui/`)
 - **Primary Owner:** 69030208 (GUI Implementation)  
 - **Collaborator:** 69030377 (UX/UI Design)
 - **Components:**
-  - `LoginWindow`: Portal for Sign In, Registration, and Password Reset using theme `LOGIN`.
-  - `App` (Main Window): Dashboard, Header with live stats (Fish count, Elapsed time, Cycles), Macro control buttons (Start/Stop/Save/Preview), Calibration tab, Settings tab, Log viewer.
-  - `AccountDialog`: Profile display, change password modal, and administrative user management table (`ttk.Treeview`).
-  - `ui_kit.py`: Reusable canvas-based anti-aliased widgets (`GButton`, `Card`, `StatCard`, `Chip`, `PillTabs`, `Toggle`, `GSlider`, `RoundEntry`, `RoundCombo`).
+  - `gui.client`: `ApiClient` handling session persistence, authentication headers, error wrapping, client configuration (`load_client_cfg`, `save_client_cfg`), and asynchronous task execution (`run_bg`).
+  - `gui.widgets`: Reusable UI elements including hover tooltip `Tip` and leap-year validated 3-dropdown `DateField`.
+  - `gui.auth_window.LoginWindow`: Authentication portal for Sign In, Registration, and Nickname/Birthday Password Reset using theme `LOGIN` (Peach/Indigo palette).
+  - `gui.dashboard.MacroDashboard` (aliased as `App`): Modern control dashboard with live session telemetry, header stat cards, real-time camera preview, fullscreen loupe calibration overlay, two-way slider settings, and tag-colored console logs.
+  - `gui.admin_dialog.AccountDialog`: Profile management modal featuring self password change, admin user table (`ttk.Treeview`), one-click account suspension toggle, administrative password reset, and Google Sheets sync trigger.
+  - `ui_kit.py`: Anti-aliased canvas rendering library (`GButton`, `Card`, `StatCard`, `Chip`, `PillTabs`, `Toggle`, `GSlider`, `RoundEntry`, `RoundCombo`).
+  - `fisch_macro.py`: Slim façade (414 lines) maintaining backward compatibility for external scripts, importing components from `gui/`, `core/`, `automation/`, `vision/`, and `data/`.
 - **Invariants:**
-  - Must never directly invoke blocking automation or networking calls on the Tkinter main thread.
-  - Must communicate with automation and backend services via asynchronous workers (`run_bg` or queue dispatch).
+  - Must never directly invoke blocking automation or networking calls on the Tkinter main thread; all REST calls dispatch asynchronously via `run_bg`.
+  - Bot lifecycle is decoupled: `MacroDashboard` accepts an optional `bot_factory` parameter, enabling mock injection during automated testing.
+  - Configuration persistence utilizes atomic `ConfigManager` from `data.config`.
 
 ### 2.2 Application Layer (`app/`)
 - **Primary Owner:** 69030304 (Python Application)

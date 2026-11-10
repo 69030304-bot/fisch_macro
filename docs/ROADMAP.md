@@ -2,7 +2,7 @@
 
 **Project:** Fisch Macro  
 **Strategy:** Preserve & Refactor (Incremental Modular Evolution)  
-**Current Phase:** Phase 5 — Database and Data Layer (COMPLETED) ➔ Next: Phase 6 (Modern GUI)  
+**Current Phase:** Phase 6 — Modern GUI (COMPLETED) ➔ Next: Phase 7 (Integration)  
 **Last Updated:** 2026-11-11  
 
 ---
@@ -16,8 +16,8 @@ flowchart TD
     P2 --> P3["Phase 3: Fishing Automation<br/><b>[COMPLETED]</b>"]
     P3 --> P4["Phase 4: Vision and Input<br/><b>[COMPLETED]</b>"]
     P4 --> P5["Phase 5: Database & Data Layer<br/><b>[COMPLETED]</b>"]
-    P5 --> P6["Phase 6: Modern GUI<br/><b>[NEXT]</b>"]
-    P6 --> P7["Phase 7: Integration<br/><b>[PENDING]</b>"]
+    P5 --> P6["Phase 6: Modern GUI<br/><b>[COMPLETED]</b>"]
+    P6 --> P7["Phase 7: Integration<br/><b>[NEXT]</b>"]
     P7 --> P8["Phase 8: Full Testing & Optimization<br/><b>[PENDING]</b>"]
     P8 --> P9["Phase 9: Release Preparation<br/><b>[PENDING]</b>"]
 ```
@@ -129,19 +129,26 @@ flowchart TD
 ---
 
 ### Phase 6 — Modern GUI
-- **Status:** **NEXT**
+- **Status:** **COMPLETED**
 - **Lead Member:** 69030208 (GUI Implementation)
 - **Collaborator:** 69030377 (UX/UI Design)
 - **Objectives:**
-  - Connect GUI strictly to `ApplicationController` and `EventBus` (no direct bot coupling).
-  - Maintain modern aesthetic defined in `ui_kit.py`.
-  - Polish dashboard responsive scaling, settings widgets, and telemetry graphs.
-  - Ensure UI thread is never blocked by background operations.
+  - Create dedicated `gui/` package decoupling client networking, custom widgets, authentication modals, account dialogs, and macro dashboard.
+  - Maintain modern aesthetic defined in `ui_kit.py` and documented in `docs/UI_SPEC.md`.
+  - Ensure UI thread is never blocked by asynchronous background worker dispatch (`run_bg`).
+  - Decouple bot lifecycle in `MacroDashboard` via dependency injection (`bot_factory`) to enable headless testing.
+  - Slim down monolithic `fisch_macro.py` from 1,751 to 414 lines while keeping 100% backward compatibility for all external imports and scripts.
+  - Author automated test suite in `tests/test_gui.py` covering client configuration, API client errors, DateField validation, async workers, log tagging, and mock bot lifecycle.
+- **Deliverables:**
+  - `gui/` package (`client.py`, `widgets.py`, `auth_window.py`, `admin_dialog.py`, `dashboard.py`, `__init__.py`).
+  - `docs/UI_SPEC.md` (Comprehensive UX/UI specification).
+  - `tests/test_gui.py` (6 automated unit tests).
+  - Total automated test suite: 42/42 passing across all modules + 10/10 service compatibility tests.
 
 ---
 
 ### Phase 7 — Integration
-- **Status:** **PENDING**
+- **Status:** **NEXT**
 - **Lead Member:** All Members
 - **Objectives:**
   - Assemble modular layers into unified desktop application.
