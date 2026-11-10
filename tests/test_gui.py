@@ -193,3 +193,8 @@ def test_macro_dashboard_init_and_lifecycle(tk_root):
 
     app.stop()
     assert app.bot.is_alive() is False
+    if app.hk:
+        try:
+            app.hk.stop()
+        except Exception:
+            pass
