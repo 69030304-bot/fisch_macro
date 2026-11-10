@@ -137,13 +137,54 @@ stateDiagram-v2
 - **Primary Owner:** 69030343 (Backend & Database)
 - **Collaborator:** 69030208 (GUI Integration)
 - **Components:**
-  - `database.py`: SQLite connection context manager with `PRAGMA foreign_keys = ON`.
-  - `Schema`:
-    - `users`: Primary account data (id, username, password_hash, nickname, birthday, role, active, lockouts).
-    - `sessions`: Token hash lookup, expiration timestamp, cascade deleted on user deletion.
-    - `login_logs`: Security audit log with IP and timestamp.
+  - `data.models`: Strongly typed dataclasses (`User`, `Session`, `LoginLog`) providing `from_row()`, `to_dict()`, and public representation helpers.
+  - `data.database`: `DatabaseManager` providing transactional context management (`PRAGMA foreign_keys = ON`), automatic rollback on failure, dynamic path resolution, and non-destructive migration execution (`apply_migration()`).
+  - `data.repositories`: Repository pattern decoupling SQL from business logic:
+    - `UserRepository`: Account CRUD, case-insensitive lookups, failed attempts, and exponential lockouts.
+    - `SessionRepository`: Token hash management, expired token pruning, user session cascade cleanup.
+    - `LogRepository`: IP and timestamp audit tracking.
+  - `data.config`: `ConfigManager` providing atomic tempfile+fsync writes, schema defaults, and corrupted file auto-recovery (`.corrupted` backup).
+  - `database.py`: Root compatibility facade delegating to `data.database`.
   - `security.py`: PBKDF2-HMAC-SHA256 password hashing (200,000 iterations), dummy timing-attack mitigation hash, cryptographically secure token generation (`secrets.token_urlsafe`).
-  - `sheets.py`: Background worker aggregating updates and pushing debounced (2.0s) snapshots to Google Sheets.
+  - `sheets.py`: Background worker aggregating updates and pushing debounced (2.0s) snapshots to Google Sheets with graceful thread shutdown.
+
+```mermaid
+classDiagram
+    class DatabaseManager {
+        +str db_path
+        +float timeout
+        +connect() Generator
+        +init_db() void
+        +table_exists(name) bool
+        +apply_migration(version, name, fn) bool
+    }
+    class UserRepository {
+        +count(conn) int
+        +get_by_id(user_id, conn) User
+        +get_by_username(username, conn) User
+        +create(username, hash, nickname, bday, role, now, conn) int
+        +lock_user(user_id, until, conn) void
+        +set_active(user_id, active, conn) bool
+        +delete(user_id, conn) bool
+    }
+    class SessionRepository {
+        +create(token_hash, user_id, expires_at, created_at, conn) void
+        +get_by_token_hash(token_hash, conn) Session
+        +get_session_with_user(token_hash, conn) Row
+        +delete_expired(now_ts, conn) int
+        +delete_other_user_sessions(user_id, keep_hash, conn) int
+    }
+    class ConfigManager {
+        +str file_path
+        +dict defaults
+        +get(key, default) Any
+        +set(key, value) void
+        +load() dict
+        +save(data) bool
+    }
+    UserRepository --> DatabaseManager
+    SessionRepository --> DatabaseManager
+```
 
 ---
 

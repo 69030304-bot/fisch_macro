@@ -139,3 +139,40 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Standalone `python test_service.py`: **10/10 PASS**.
   - Module import `python -c "import fisch_macro"`: **PASS**.
 - **Status:** **COMPLETED**
+
+## Phase 5 — Database and Data Layer
+
+- **Phase:** Phase 5 — Database and Data Layer
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030343 (นายธีระนิตย์ บุญทวี — Backend / Database Developer)
+- **Active Branch:** `feature/69030343-data-layer` (derived from `team/69030343-backend-db`)
+- **Task Description:**
+  - Audit existing persistence layer (`database.py`, `service.py`, `security.py`, `sheets.py`, `settings.py`, and `settings.json`).
+  - Create dedicated `data/` package (`models.py`, `database.py`, `repositories.py`, `config.py`, `__init__.py`).
+  - Implement strongly typed data models (`User`, `Session`, `LoginLog`) with `from_row()`, `to_dict()`, and public representation helpers.
+  - Implement `DatabaseManager` providing transactional context management (`PRAGMA foreign_keys = ON`), automatic rollback on failure, dynamic path resolution, and non-destructive schema migrations (`apply_migration()`).
+  - Extract repository pattern into `UserRepository`, `SessionRepository`, and `LogRepository` to decouple raw SQL queries from business logic.
+  - Refactor `service.py` to utilize repositories while maintaining 100% backward compatibility for all API routes, return structures, and status codes.
+  - Implement `ConfigManager` in `data/config.py` with atomic tempfile+fsync writes, schema defaults, and automated `.corrupted` backup recovery.
+  - Update `fisch_macro.py` (`load_config`, `save_config`) and `settings.py` to use `ConfigManager`.
+  - Harden `sheets.py` with graceful background thread termination (`stop()`) and secure payload verification.
+  - Author automated test suite `tests/test_database.py` with 8 comprehensive tests.
+- **Changes Made:**
+  - `data/models.py`: Strongly typed `User`, `Session`, `LoginLog` dataclasses.
+  - `data/database.py`: `DatabaseManager`, transaction context manager, migration engine, and schema constants.
+  - `data/repositories.py`: `UserRepository`, `SessionRepository`, `LogRepository`.
+  - `data/config.py`: `ConfigManager` with atomic file persistence.
+  - `data/__init__.py`: Package export declarations.
+  - `database.py`: Root compatibility facade delegating to `data.database`.
+  - `service.py`: Refactored to consume repositories via `data/`.
+  - `settings.py`: Refactored to consume `ConfigManager`.
+  - `sheets.py`: Added graceful thread termination `stop()` and status reporting.
+  - `fisch_macro.py`: Updated `load_config` and `save_config` to utilize `ConfigManager`.
+  - `tests/test_database.py`: 8 comprehensive tests for cascades, transactions, repositories, migrations, and atomic config.
+  - Updated `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **36/36 PASS** (100% passing across automation, core, database, vision, vision math, and service suites).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - FastAPI app import `python -c "import main"`: **PASS**.
+  - Macro app import `python -c "import fisch_macro"`: **PASS**.
+- **Status:** **COMPLETED**

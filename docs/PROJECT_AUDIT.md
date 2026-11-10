@@ -164,10 +164,14 @@ Executed on 2026-11-11 using Python 3.12.9 in isolated `.venv`:
 ผ่านทุกการทดสอบ! (10/10 PASS, 0 FAIL)
 ```
 
-### 6.2 Automation and Client Verification Status
-- **Client Automation Tests**: Not automated. Relies on active Windows environment and live Roblox game execution.
-- **Vision Algorithm Tests**: Logic exists inside `fisch_macro.py`, but has no standalone unit tests.
-- **Platform Portability**: `fisch_macro.py` cannot be imported on non-Windows OS due to unshielded `ctypes.windll.user32` calls at module load time.
+### 6.2 Unit and Regression Test Suite Evolution
+- **Core Automation Suite (`tests/test_core.py`)**: 9 tests verifying StateManager, EventBus, CancellationToken, and MacroEngine lifecycle.
+- **Vision Math Suite (`tests/test_vision_math.py`)**: 5 tests verifying `color_mask`, `runs_of`, `choose`, EMA `Track`, and `centers`.
+- **Vision Suite (`tests/test_vision.py`)**: 5 tests verifying mock grabber, synthetic minigame detection, row stride, and track reset.
+- **Automation Controller Suite (`tests/test_automation.py`)**: 8 tests verifying `ReelController`, `SigmaDeltaModulator`, and operations.
+- **Database Persistence Suite (`tests/test_database.py`)**: 8 tests verifying SQLite foreign key cascades, transaction rollbacks, repositories, safe schema migrations, and atomic configuration recovery.
+- **Service Compatibility Suite (`tests/test_service_compat.py`)**: 1 test running full 10-step service verification suite.
+- **Overall Pytest Suite**: **36/36 PASS** (100% passing across all modules).
 
 ---
 

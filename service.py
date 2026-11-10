@@ -3,6 +3,9 @@ service.py - ตรรกะของระบบ (business logic) ทั้ง�
 
 main.py (FastAPI) แค่รับคำขอ HTTP แล้วเรียกฟังก์ชันในไฟล์นี้
 แยกแบบนี้เพื่อให้ทดสอบ (test_service.py) ได้โดยไม่ต้องเปิดเซิร์ฟเวอร์
+
+Refactored in Phase 5 to use Repository Pattern via data layer.
+Maintains 100% backward compatibility for all API routes and return contracts.
 """
 import re
 import secrets
@@ -13,6 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import database
 import security
+from data.repositories import LogRepository, SessionRepository, UserRepository
 from database import db
 
 TZ = timezone(timedelta(hours=7))          # เวลาไทย (UTC+7)
@@ -26,6 +30,11 @@ RESET_MAX_FAILS, RESET_LOCK_SECS = 5, 300  # ยืนยันตัวตน�
 # หัวตาราง Google Sheet (ไม่มีรหัสผ่าน/แฮช เพราะไม่ควรส่งออกไปไหน)
 SHEET_HEADERS = ["ID", "ชื่อผู้ใช้", "ชื่อเล่น", "วันเกิด", "สิทธิ์", "สถานะ", "สมัครเมื่อ", "ล็อกอินล่าสุด"]
 SHEET_TEXT_COLUMNS = [3, 4, 7, 8]          # คอลัมน์ (เริ่มนับที่ 1) ที่ให้เก็บเป็นข้อความ ไม่ให้ Sheets แปลงเอง
+
+# Repositories
+user_repo = UserRepository()
+session_repo = SessionRepository()
+log_repo = LogRepository()
 
 
 class ApiError(Exception):
@@ -90,8 +99,7 @@ def _fmt(ts):
 
 
 def _log(c, username, ok, ip, now):
-    c.execute("INSERT INTO login_logs (username, ok, ip, at) VALUES (?, ?, ?, ?)",
-              (username, 1 if ok else 0, ip, now))
+    log_repo.log(username, ok, ip, now, conn=c)
 
 
 # ================================================================ สมัคร / ล็อกอิน
@@ -103,14 +111,10 @@ def register(username, password, nickname, birthday):
     pw_hash = security.hash_password(password)       # เก็บแฮช ไม่เก็บรหัสจริง
     taken, new_id = False, None
     with db() as c:
-        first = c.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
+        first = user_repo.count(conn=c) == 0
         role = "admin" if first else "user"          # คนแรกที่สมัครเป็นผู้ดูแล
         try:
-            cur = c.execute(
-                "INSERT INTO users (username, password_hash, nickname, birthday, role, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (username, pw_hash, nickname, birthday, role, time.time()))
-            new_id = cur.lastrowid
+            new_id = user_repo.create(username, pw_hash, nickname, birthday, role, time.time(), conn=c)
         except sqlite3.IntegrityError:               # ชนกับ UNIQUE ของ username
             taken = True
     if taken:
@@ -125,36 +129,33 @@ def login(username, password, ip=""):
     now = time.time()
     outcome, result = None, None
     with db() as c:
-        u = c.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        u = user_repo.get_by_username(username, conn=c)
         if u is None:
             security.verify_password(password, security.DUMMY_HASH)
             _log(c, username, False, ip, now)
             outcome = (401, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        elif u["locked_until"] > now:
-            outcome = (429, f"ลองผิดหลายครั้ง กรุณารออีก {int(u['locked_until'] - now) + 1} วินาที")
-        elif not security.verify_password(password, u["password_hash"]):
-            fails = u["failed_count"] + 1
+        elif u.locked_until > now:
+            outcome = (429, f"ลองผิดหลายครั้ง กรุณารออีก {int(u.locked_until - now) + 1} วินาที")
+        elif not security.verify_password(password, u.password_hash):
+            fails = u.failed_count + 1
             if fails >= MAX_FAILS:
-                c.execute("UPDATE users SET failed_count = 0, locked_until = ? WHERE id = ?",
-                          (now + LOCK_SECS, u["id"]))
+                user_repo.lock_user(u.id, now + LOCK_SECS, conn=c)
                 outcome = (429, f"ผิดครบ {MAX_FAILS} ครั้ง ล็อก {LOCK_SECS} วินาที")
             else:
-                c.execute("UPDATE users SET failed_count = ? WHERE id = ?", (fails, u["id"]))
+                user_repo.set_failed_count(u.id, fails, conn=c)
                 outcome = (401, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
             _log(c, username, False, ip, now)
-        elif not u["active"]:
+        elif not u.active:
             _log(c, username, False, ip, now)
             outcome = (403, "บัญชีนี้ถูกระงับการใช้งาน")
         else:
             token = security.new_token()
-            c.execute("UPDATE users SET failed_count = 0, locked_until = 0, last_login = ? WHERE id = ?",
-                      (now, u["id"]))
-            c.execute("DELETE FROM sessions WHERE expires_at < ?", (now,))      # ล้าง token ที่หมดอายุ
-            c.execute("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
-                      (security.hash_token(token), u["id"], now + SESSION_TTL, now))
+            user_repo.record_login_success(u.id, now, conn=c)
+            session_repo.delete_expired(now, conn=c)      # ล้าง token ที่หมดอายุ
+            session_repo.create(security.hash_token(token), u.id, now + SESSION_TTL, now, conn=c)
             _log(c, username, True, ip, now)
-            result = {"token": token, "id": u["id"], "username": u["username"],
-                      "nickname": u["nickname"], "role": u["role"], "expires_in": SESSION_TTL}
+            result = {"token": token, "id": u.id, "username": u.username,
+                      "nickname": u.nickname, "role": u.role, "expires_in": SESSION_TTL}
     if outcome:                      # raise หลังออกจาก with เพื่อให้ commit (นับครั้งที่ผิด) ไปก่อน
         raise ApiError(*outcome)
     _changed()
@@ -165,10 +166,7 @@ def current_user(token):
     """ตรวจ token -> คืนข้อมูลผู้ใช้ ถ้าไม่ผ่านจะ raise 401/403"""
     now = time.time()
     with db() as c:
-        row = c.execute(
-            "SELECT u.id, u.username, u.nickname, u.birthday, u.role, u.active, s.expires_at "
-            "FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?",
-            (security.hash_token(token),)).fetchone()
+        row = session_repo.get_session_with_user(security.hash_token(token), conn=c)
     if row is None or row["expires_at"] < now:
         raise ApiError(401, "เซสชันหมดอายุหรือบัญชีถูกลบ กรุณาล็อกอินใหม่")
     if not row["active"]:
@@ -179,7 +177,7 @@ def current_user(token):
 
 def logout(token):
     with db() as c:
-        c.execute("DELETE FROM sessions WHERE token_hash = ?", (security.hash_token(token),))
+        session_repo.delete(security.hash_token(token), conn=c)
 
 
 # ================================================================ เปลี่ยน / ลืม / รีเซ็ตรหัสผ่าน
@@ -187,15 +185,13 @@ def change_password(user_id, token, old_password, new_password):
     _check_password(new_password)
     wrong = False
     with db() as c:
-        u = c.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,)).fetchone()
-        if u is None or not security.verify_password(old_password or "", u["password_hash"]):
+        u = user_repo.get_by_id(user_id, conn=c)
+        if u is None or not security.verify_password(old_password or "", u.password_hash):
             wrong = True
         else:
-            c.execute("UPDATE users SET password_hash = ? WHERE id = ?",
-                      (security.hash_password(new_password), user_id))
+            user_repo.update_password(user_id, security.hash_password(new_password), conn=c)
             # ออกจากระบบทุกเครื่องอื่น เหลือเฉพาะเครื่องที่กำลังใช้
-            c.execute("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
-                      (user_id, security.hash_token(token)))
+            session_repo.delete_other_user_sessions(user_id, security.hash_token(token), conn=c)
     if wrong:
         raise ApiError(400, "รหัสผ่านเดิมไม่ถูกต้อง")
     return {"ok": True}
@@ -215,10 +211,9 @@ def reset_password(username, birthday, nickname, new_password):
     generic = (400, "ข้อมูลไม่ตรงกับที่ลงทะเบียนไว้")      # ข้อความเดียวกันทุกกรณี ไม่บอกว่าผิดช่องไหน
     with db() as c:
         if username:
-            u = c.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+            u = user_repo.get_by_username(username, conn=c)
         else:
-            matches = c.execute("SELECT * FROM users WHERE LOWER(TRIM(nickname)) = ? AND birthday = ?",
-                                (clean_nick, birthday)).fetchall()
+            matches = user_repo.find_by_nickname_and_birthday(clean_nick, birthday, conn=c)
             if len(matches) > 1:
                 outcome = (400, "พบผู้ใช้ที่มีชื่อเล่นและวันเกิดซ้ำกันหลายคน กรุณาระบุชื่อผู้ใช้ด้วย")
                 u = None
@@ -231,21 +226,19 @@ def reset_password(username, birthday, nickname, new_password):
             pass
         elif u is None:
             outcome = generic
-        elif u["reset_locked_until"] > now:
-            outcome = (429, f"ลองผิดหลายครั้ง กรุณารออีก {int(u['reset_locked_until'] - now) + 1} วินาที")
-        elif u["birthday"] != birthday or u["nickname"].strip().lower() != clean_nick:
-            fails = u["reset_failed_count"] + 1
+        elif u.reset_locked_until > now:
+            outcome = (429, f"ลองผิดหลายครั้ง กรุณารออีก {int(u.reset_locked_until - now) + 1} วินาที")
+        elif u.birthday != birthday or u.nickname.strip().lower() != clean_nick:
+            fails = u.reset_failed_count + 1
             if fails >= RESET_MAX_FAILS:
-                c.execute("UPDATE users SET reset_failed_count = 0, reset_locked_until = ? WHERE id = ?",
-                          (now + RESET_LOCK_SECS, u["id"]))
+                user_repo.lock_reset(u.id, now + RESET_LOCK_SECS, conn=c)
                 outcome = (429, f"ผิดครบ {RESET_MAX_FAILS} ครั้ง ล็อก {RESET_LOCK_SECS // 60} นาที")
             else:
-                c.execute("UPDATE users SET reset_failed_count = ? WHERE id = ?", (fails, u["id"]))
+                user_repo.set_reset_failed_count(u.id, fails, conn=c)
                 outcome = (400, f"ข้อมูลไม่ตรงกับที่ลงทะเบียนไว้ ({fails}/{RESET_MAX_FAILS})")
         else:
-            c.execute("UPDATE users SET password_hash = ?, failed_count = 0, locked_until = 0, "
-                      "reset_failed_count = 0, reset_locked_until = 0 WHERE id = ?", (new_hash, u["id"]))
-            c.execute("DELETE FROM sessions WHERE user_id = ?", (u["id"],))     # ออกจากระบบทุกเครื่อง
+            user_repo.reset_password_success(u.id, new_hash, conn=c)
+            session_repo.delete_all_for_user(u.id, conn=c)     # ออกจากระบบทุกเครื่อง
     if outcome:
         raise ApiError(*outcome)
     return {"ok": True}
@@ -259,20 +252,17 @@ def _random_password(n=8):
 # ================================================================ ฝั่งผู้ดูแล (admin)
 def list_users():
     with db() as c:
-        rows = c.execute(
-            "SELECT id, username, nickname, birthday, role, active, created_at, last_login "
-            "FROM users ORDER BY id").fetchall()
-    return [{"id": r["id"], "username": r["username"], "nickname": r["nickname"],
-             "birthday": r["birthday"], "role": r["role"], "active": bool(r["active"]),
-             "created_at": _fmt(r["created_at"]), "last_login": _fmt(r["last_login"])} for r in rows]
+        users = user_repo.list_all(conn=c)
+    return [{"id": u.id, "username": u.username, "nickname": u.nickname,
+             "birthday": u.birthday, "role": u.role, "active": bool(u.active),
+             "created_at": _fmt(u.created_at), "last_login": _fmt(u.last_login)} for u in users]
 
 
 def set_active(admin_id, user_id, active):
     if user_id == admin_id and not active:
         raise ApiError(400, "ระงับบัญชีตัวเองไม่ได้")
     with db() as c:
-        found = c.execute("UPDATE users SET active = ? WHERE id = ?",
-                          (1 if active else 0, user_id)).rowcount > 0
+        found = user_repo.set_active(user_id, active, conn=c)
     if not found:
         raise ApiError(404, "ไม่พบผู้ใช้")
     _changed()
@@ -283,7 +273,7 @@ def delete_user(admin_id, user_id):
     if user_id == admin_id:
         raise ApiError(400, "ลบบัญชีตัวเองไม่ได้")
     with db() as c:
-        found = c.execute("DELETE FROM users WHERE id = ?", (user_id,)).rowcount > 0   # sessions ถูกลบตามด้วย CASCADE
+        found = user_repo.delete(user_id, conn=c)   # sessions ถูกลบตามด้วย CASCADE
     if not found:
         raise ApiError(404, "ไม่พบผู้ใช้")
     _changed()
@@ -299,10 +289,9 @@ def admin_reset_password(user_id, new_password=""):
         new_password = _random_password()
     new_hash = security.hash_password(new_password)
     with db() as c:
-        found = c.execute("UPDATE users SET password_hash = ?, failed_count = 0, locked_until = 0 WHERE id = ?",
-                          (new_hash, user_id)).rowcount > 0
+        found = user_repo.admin_reset_password(user_id, new_hash, conn=c)
         if found:
-            c.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+            session_repo.delete_all_for_user(user_id, conn=c)
     if not found:
         raise ApiError(404, "ไม่พบผู้ใช้")
     return {"new_password": new_password}

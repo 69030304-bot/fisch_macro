@@ -37,6 +37,7 @@ DEBOUNCE_SECS = 2.0
 class SheetSync:
     def __init__(self):
         self._event = threading.Event()
+        self._stop_event = threading.Event()
         self._started = False
         self.last_status = "ยังไม่เคยซิงค์"
 
@@ -49,8 +50,15 @@ class SheetSync:
         if self._started or not self.enabled:
             return
         self._started = True
+        self._stop_event.clear()
         threading.Thread(target=self._loop, daemon=True).start()
         self.request()
+
+    def stop(self):
+        """หยุดการทำงานของ worker thread เบื้องหลัง"""
+        self._stop_event.set()
+        self._event.set()
+        self._started = False
 
     def request(self):
         """ขอซิงค์ (ไม่รอผล) ใช้เป็น hook เมื่อข้อมูลผู้ใช้เปลี่ยน"""
@@ -58,8 +66,10 @@ class SheetSync:
             self._event.set()
 
     def _loop(self):
-        while True:
+        while not self._stop_event.is_set():
             self._event.wait()
+            if self._stop_event.is_set():
+                break
             time.sleep(DEBOUNCE_SECS)     # รวมคำขอที่มาถี่ๆ
             self._event.clear()
             self.push_now()

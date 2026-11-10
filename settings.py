@@ -1,20 +1,41 @@
 """
 settings.py - โหลดค่าตั้งค่าการเชื่อมต่อ Google Sheet จาก settings.json หรือ Environment Variables
+
+Refactored in Phase 5 to use ConfigManager for atomic and safe reading/writing.
 """
-import json
 import os
+
+from data.config import ConfigManager
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 
-SHEET_WEBHOOK_URL = os.environ.get("SHEET_WEBHOOK_URL", "")
-SHEET_SECRET = os.environ.get("SHEET_SECRET", "")
+_settings_mgr = ConfigManager(
+    SETTINGS_FILE,
+    {
+        "sheet_webhook_url": "",
+        "sheet_secret": "",
+    },
+)
 
-if os.path.exists(SETTINGS_FILE):
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            SHEET_WEBHOOK_URL = data.get("sheet_webhook_url", SHEET_WEBHOOK_URL)
-            SHEET_SECRET = data.get("sheet_secret", SHEET_SECRET)
-    except Exception as e:
-        print(f"[settings] ไม่สามารถอ่านไฟล์ {SETTINGS_FILE}: {e}")
+SHEET_WEBHOOK_URL = os.environ.get("SHEET_WEBHOOK_URL") or _settings_mgr.get("sheet_webhook_url", "")
+SHEET_SECRET = os.environ.get("SHEET_SECRET") or _settings_mgr.get("sheet_secret", "")
+
+
+def reload_settings():
+    """Reload settings from disk and environment."""
+    global SHEET_WEBHOOK_URL, SHEET_SECRET
+    _settings_mgr.load()
+    SHEET_WEBHOOK_URL = os.environ.get("SHEET_WEBHOOK_URL") or _settings_mgr.get("sheet_webhook_url", "")
+    SHEET_SECRET = os.environ.get("SHEET_SECRET") or _settings_mgr.get("sheet_secret", "")
+
+
+def save_settings(sheet_webhook_url: str = "", sheet_secret: str = "") -> None:
+    """Persist new settings atomically."""
+    global SHEET_WEBHOOK_URL, SHEET_SECRET
+    _settings_mgr.save({
+        "sheet_webhook_url": sheet_webhook_url,
+        "sheet_secret": sheet_secret,
+    })
+    SHEET_WEBHOOK_URL = os.environ.get("SHEET_WEBHOOK_URL") or sheet_webhook_url
+    SHEET_SECRET = os.environ.get("SHEET_SECRET") or sheet_secret

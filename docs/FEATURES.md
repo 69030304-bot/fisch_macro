@@ -26,12 +26,26 @@
 | Admin Toggle Active | Backend / GUI | **Working** | 69030343 / 69030208 | Admins can suspend/unsuspend accounts. |
 | Admin Password Reset | Backend / GUI | **Working** | 69030343 / 69030208 | Generates 8-character random password if blank. |
 | Admin Delete User | Backend / DB | **Working** | 69030343 / 69030208 | Cascade deletes sessions via SQLite FK. |
-| Google Sheet Live Sync | Backend / Cloud | **Working** | 69030343 | Debounced (2.0s); excludes sensitive hashes/tokens. |
+| Google Sheet Live Sync | Backend / Cloud | **Working** | 69030343 | Debounced (2.0s); excludes sensitive hashes/tokens; graceful thread shutdown. |
 | Admin Manual Sheet Sync | Backend / GUI | **Working** | 69030343 / 69030208 | One-click button in account dialog to trigger immediate sync. |
 
 ---
 
-## 2. Desktop GUI & User Experience
+## 2. Persistence & Data Layer (Phase 5)
+
+| Feature | Subsystem | Status | Owner | Notes |
+|---|---|---|---|---|
+| Strongly Typed Models | Data / Models | **Working** | 69030343 | `User`, `Session`, `LoginLog` dataclasses in `data.models` with `from_row()` and serialization. |
+| Database Manager & Pool | Data / Database | **Working** | 69030343 | `DatabaseManager`: Context-managed transactions, dynamic path resolution, `PRAGMA foreign_keys = ON`. |
+| User Repository | Data / DAL | **Working** | 69030343 | `UserRepository`: Decoupled CRUD, case-insensitive username lookups, failed count and lockout handling. |
+| Session Repository | Data / DAL | **Working** | 69030343 | `SessionRepository`: Token hash queries, join with user, expired session cleanup, multi-session management. |
+| Audit Log Repository | Data / DAL | **Working** | 69030343 | `LogRepository`: IP and timestamp audit tracking for security operations. |
+| Safe Schema Migrations | Data / Database | **Working** | 69030343 | `MigrationManager` tracking migrations in `_schema_migrations` table idempotently. |
+| Atomic Config Manager | Data / Config | **Working** | 69030343 | `ConfigManager`: Atomic tempfile + fsync write, fallback defaults, automatic `.corrupted` backup recovery. |
+
+---
+
+## 3. Desktop GUI & User Experience
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
@@ -46,7 +60,7 @@
 
 ---
 
-## 3. Automation Core & Fishing Workflow
+## 4. Automation Core & Fishing Workflow
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
@@ -63,12 +77,14 @@
 
 ---
 
-## 4. Testing & Infrastructure
+## 5. Testing & Infrastructure
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
 | Backend Automated Tests | QA / Backend | **Working** | 69030450 | `test_service.py` and `tests/test_service_compat.py` pass 10/10 test cases. |
+| Database Unit Tests | QA / Backend | **Working** | 69030450 / 69030343 | `tests/test_database.py`: 8 tests validating transactions, cascades, repositories, migrations, and atomic config. |
 | Automated Vision Tests | QA / Vision | **Working** | 69030450 | `tests/test_vision_math.py` unit tests for `color_mask`, `runs_of`, `choose`, `Track`, and `centers`. |
 | Automated Control Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `Track` EMA, `InputManager`, and failsafe triggers. |
 | Automated Macro Engine Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `StateManager`, `EventBus`, `CancellationToken`, and `MacroEngine`. |
+| Automated Automation Tests | QA / Automation | **Working** | 69030450 | `tests/test_automation.py` tests for `ReelController`, `SigmaDeltaModulator`, and operations. |
 | CI Pipeline Configuration | QA / DevOps | **Missing** | 69030450 | GitHub Actions workflow to run automated tests on pull requests. |

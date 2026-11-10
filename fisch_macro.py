@@ -82,20 +82,17 @@ DEFAULTS = {
 }
 
 
+from data.config import ConfigManager
+
+_config_manager = ConfigManager(CONFIG_FILE, DEFAULTS)
+
+
 def load_config():
-    cfg = dict(DEFAULTS)
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                cfg.update(json.load(f))
-        except Exception:
-            pass
-    return cfg
+    return _config_manager.load()
 
 
 def save_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    _config_manager.save(cfg)
 
 
 def rgb_hex(c):
