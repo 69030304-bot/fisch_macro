@@ -85,3 +85,30 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - Standalone `python test_service.py`: **10/10 PASS**.
   - Module import `python -c "import fisch_macro"`: **PASS** (cross-platform import unlocked).
 - **Status:** **COMPLETED**
+
+## Phase 3 — Fishing Automation
+
+- **Phase:** Phase 3 — Fishing Automation
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030304 (นายชยภัทร พุทธศรีเมือง — Python Application / Automation Core)
+- **Active Branch:** `feature/69030304-fishing-automation` (derived from `team/69030304-python-automation`)
+- **Task Description:**
+  - Create decoupled `automation` package (`controller.py`, `operations.py`, `workflow.py`, `__init__.py`).
+  - Extract and isolate `ReelController` (PD control with integral accumulator and invert option) and `SigmaDeltaModulator` (duty-cycle mouse pulse converter).
+  - Modularize discrete fishing operations: `EquipRodOperation`, `CastOperation`, `BiteWaitOperation`, and `ReelOperation` with `AutomationContext`.
+  - Implement high-level `FishingWorkflow` orchestrating the cyclic sequence with `CancellationToken`, `EventBus`, and `InputManager`.
+  - Refactor `fisch_macro.py`'s `Bot.reel()` method to utilize `ReelController` and `SigmaDeltaModulator`, preserving exact timing and PID parameters.
+  - Create automated unit and regression test suite in `tests/test_automation.py`.
+- **Changes Made:**
+  - `automation/controller.py`: `ReelController`, `SigmaDeltaModulator`.
+  - `automation/operations.py`: `AutomationContext`, `EquipRodOperation`, `CastOperation`, `BiteWaitOperation`, `ReelOperation`.
+  - `automation/workflow.py`: `FishingWorkflow` cyclic orchestrator.
+  - `automation/__init__.py`: Package exports.
+  - `fisch_macro.py`: Refactored `reel()` to consume `ReelController` and `SigmaDeltaModulator`.
+  - `tests/test_automation.py`: 8 unit and regression tests.
+  - Updated `docs/FEATURES.md` and `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **23/23 PASS** (100% passing across automation, core, vision math, and service suites).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Module import `python -c "import fisch_macro"`: **PASS**.
+- **Status:** **COMPLETED**

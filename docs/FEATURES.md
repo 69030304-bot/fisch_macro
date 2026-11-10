@@ -50,12 +50,12 @@
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
-| Rod Equipping | Automation | **Needs Verification** | 69030304 | Taps rod hotbar slot (1-9) once at startup. |
-| Casting Action | Automation / Input | **Needs Verification** | 69030304 | Holds left mouse button for configurable `cast_hold` duration. |
-| Bite Detection / Shake | Automation / Vision | **Needs Verification** | 69030304 | Repeatedly taps `Enter` and toggles `\` navigation. |
-| Horizontal Reel Tracking | Vision / Automation | **Partially Working** | 69030304 | Vectorized color masking and clustering; tightly coupled in `fisch_macro.py`. |
+| Rod Equipping | Automation | **Working** | 69030304 | `EquipRodOperation`: Taps rod hotbar slot (1-9) once at startup. |
+| Casting Action | Automation / Input | **Working** | 69030304 | `CastOperation`: Holds left mouse button for configurable `cast_hold` duration. |
+| Bite Detection / Shake | Automation / Vision | **Working** | 69030304 | `BiteWaitOperation`: Repeatedly taps `Enter` and toggles `\` navigation. |
+| Horizontal Reel Tracking | Vision / Automation | **Working** | 69030304 | `ReelOperation`: Vectorized color masking and clustering with `ReelController`. |
 | Predictive Position Estimator | Core / Automation | **Working** | 69030304 | `Track` class uses exponential moving average (EMA) velocity. |
-| PD Controller & Sigma-Delta | Automation / Core | **Working** | 69030304 | Calculates normalized error $u$ and modulates mouse pulses at ~6ms. |
+| PD Controller & Sigma-Delta | Automation / Core | **Working** | 69030304 | `ReelController` & `SigmaDeltaModulator` modularized with comprehensive unit tests. |
 | Telemetry Trace Recording | Monitoring | **Working** | 69030304 | Logs timestamped tracking data to `fisch_trace.csv`. |
 | Global Hotkeys | Input / Core | **Working** | 69030304 | `pynput` listener for F6 (start/stop), F7 (abort), F8 (snapshot). |
 | Emergency Stop Failsafe | Input / Safety | **Working** | 69030304 | Cursor at (0, 0) aborts macro loop immediately. |

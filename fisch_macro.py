@@ -43,6 +43,7 @@ except ImportError:
     winsound = None
 
 # ---------------------------------------------------------------- Hardware Input (via core.input)
+from automation.controller import ReelController, SigmaDeltaModulator
 from core.input import (
     SCAN,
     cursor_pos,
@@ -301,7 +302,8 @@ class Bot(threading.Thread):
         stride = row_stride(region)
         ft, bt = Track(), Track()
         bar_w = None
-        integ, acc = 0.0, 0.5
+        ctrl = ReelController(kp=cfg["kp"], kd=cfg["kd"], latency=cfg["latency"], invert=cfg["invert"])
+        modulator = SigmaDeltaModulator(initial_acc=0.5)
         trace = []
         t0 = time.perf_counter()
         last_fish_seen = last_ctrl = fps_t = t0
@@ -330,20 +332,9 @@ class Bot(threading.Thread):
                 if ft.fresh(now) and bt.fresh(now):
                     tp = now + lat
                     fp, bp = ft.pos(tp), bt.pos(tp)
-                    half = max(8.0, (bar_w or 30.0) / 2)
-                    e = (fp - bp) / half                 # +1 = ปลาอยู่ที่ขอบขวาของแถบ
-                    ev = (ft.v - bt.v) / half
-                    if abs(e) < 0.8:
-                        integ = min(0.3, max(-0.3, integ + 0.3 * e * dt))
-                    u = min(1.0, max(0.0, 0.5 + kp * e + kd * ev + integ))
-                    if cfg["invert"]:
-                        u = 1.0 - u
-                    acc += u                              # sigma-delta: แปลง u เป็นจังหวะกด/ปล่อย
-                    if acc >= 1.0:
-                        acc -= 1.0
-                        self.hold(True)
-                    else:
-                        self.hold(False)
+                    u, e, ev = ctrl.compute(fp, ft.v, bp, bt.v, bar_w, dt)
+                    hold = modulator.step(u)
+                    self.hold(hold)
                     if cfg["trace"]:
                         trace.append((round(now - t0, 4), round(ft.x, 1), round(bt.x, 1),
                                       round(bar_w or 0, 1), round(u, 3), int(self.holding)))
