@@ -59,7 +59,7 @@
 | Telemetry Trace Recording | Monitoring | **Working** | 69030304 | Logs timestamped tracking data to `fisch_trace.csv`. |
 | Global Hotkeys | Input / Core | **Working** | 69030304 | `pynput` listener for F6 (start/stop), F7 (abort), F8 (snapshot). |
 | Emergency Stop Failsafe | Input / Safety | **Working** | 69030304 | Cursor at (0, 0) aborts macro loop immediately. |
-| Platform Independence | Core / Input | **Broken** | 69030304 / 69030450 | `ctypes.windll` called globally at module import; fails on non-Windows. |
+| Platform Independence | Core / Input | **Working** | 69030304 / 69030450 | `core.input` abstracts Win32 SendInput and provides MockInputDriver for cross-platform execution & tests. |
 
 ---
 
@@ -67,8 +67,8 @@
 
 | Feature | Subsystem | Status | Owner | Notes |
 |---|---|---|---|---|
-| Backend Automated Tests | QA / Backend | **Working** | 69030450 | `test_service.py` passes 10/10 test cases. |
-| Automated Vision Tests | QA / Vision | **Missing** | 69030450 | Needs unit tests for `runs_of`, `choose`, `analyze` with fixtures. |
-| Automated Control Tests | QA / Core | **Missing** | 69030450 | Needs unit tests for `Track`, PD controller, and Sigma-Delta. |
-| Automated Macro Engine Tests | QA / Core | **Missing** | 69030450 | Needs state machine transition tests and task cancellation tests. |
+| Backend Automated Tests | QA / Backend | **Working** | 69030450 | `test_service.py` and `tests/test_service_compat.py` pass 10/10 test cases. |
+| Automated Vision Tests | QA / Vision | **Working** | 69030450 | `tests/test_vision_math.py` unit tests for `color_mask`, `runs_of`, `choose`, `Track`, and `centers`. |
+| Automated Control Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `Track` EMA, `InputManager`, and failsafe triggers. |
+| Automated Macro Engine Tests | QA / Core | **Working** | 69030450 | `tests/test_core.py` tests for `StateManager`, `EventBus`, `CancellationToken`, and `MacroEngine`. |
 | CI Pipeline Configuration | QA / DevOps | **Missing** | 69030450 | GitHub Actions workflow to run automated tests on pull requests. |

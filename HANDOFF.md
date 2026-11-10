@@ -2,98 +2,99 @@
 
 **Project:** Fisch Macro  
 **Handoff Date:** 2026-11-11  
-**Author:** Member 69030450 (นายกิตติศักดิ์ พัฒนนิติศักดิ์ — QA / Documentation)  
-**Current Active Branch:** `task/69030450-phase0-audit`  
-**Current Base Branch:** `team/69030450-qa-docs` (branched from `develop`, which branched from `main`)  
+**Author:** Member 69030304 (นายชยภัทร พุทธศรีเมือง — Python Application / Automation Core)  
+**Current Active Branch:** `feature/69030304-core-refactoring`  
+**Base Branch:** `team/69030304-python-automation`  
+**Integration Target:** `develop`  
 
 ---
 
 ## 1. Current Project State
 
-Phase 0 (Repository Audit) is **COMPLETED**.  
-Phase 1 (Architecture & Team Setup) documentation is **COMPLETED & READY FOR REVIEW**.
+- **Phase 0 (Repository Audit):** **COMPLETED**
+- **Phase 1 (Architecture & Team Setup):** **COMPLETED**
+- **Phase 2 (Core Refactoring):** **COMPLETED & VERIFIED**
 
-The repository has been thoroughly audited, dependencies cataloged, baseline tests executed (10/10 PASS), and full foundational documentation written. The team branch topology (`develop`, 5 team branches, task branch) has been established safely without modifying `main`.
+The core macro engine has been cleanly decoupled into the `core/` package. The platform-dependent Win32 `SendInput` has been abstracted behind `core.input.InputManager`, allowing the entire application to be imported, developed, and tested across platforms. Full automated unit test suites (`tests/test_core.py`, `tests/test_vision_math.py`, `tests/test_service_compat.py`) pass with 15/15 successful test cases.
 
-No code restructuring has been performed yet, adhering strictly to the "Preserve & Refactor" strategy and Phase 0 constraints.
+All existing functionality, algorithms, timing parameters, UI behavior, and settings configurations have been strictly preserved.
 
 ---
 
 ## 2. Git Status and Branch Mapping
 
 ```
-* task/69030450-phase0-audit (Active Task Branch)
-  develop (Integration Branch)
-  main (Protected Production Branch, matches origin/main @ 49f746d)
-  team/69030208-gui-db
-  team/69030304-python-automation
-  team/69030343-backend-db
-  team/69030377-ux-ui
-  team/69030450-qa-docs
-  origin/main
+* feature/69030304-core-refactoring (Active Task Branch, ready to merge into team branch)
+  team/69030304-python-automation   (Member 69030304 Base Branch)
+  develop                           (Integration Branch @ 8b9ba8b)
+  team/69030450-qa-docs             (Member 69030450 Base Branch @ 8b9ba8b)
+  team/69030377-ux-ui               (Member 69030377 Base Branch @ 49f746d)
+  team/69030343-backend-db          (Member 69030343 Base Branch @ 49f746d)
+  team/69030208-gui-db              (Member 69030208 Base Branch @ 49f746d)
+  main                              (Protected Production @ 49f746d)
 ```
-
-- **Protected Main:** Never commit or push directly to `main`. Never merge into `main` without explicit maintainer approval.
-- **Integration Target:** Pull Requests must target `develop`.
 
 ---
 
 ## 3. Files Created / Modified in this Task
 
-### Created Documentation:
-- `docs/PROJECT_AUDIT.md`: Complete audit of architecture, files, features, dependencies, test results, and risks.
-- `docs/ARCHITECTURE.md`: High-level and layer-by-layer target modular architecture, data flows, and state machines.
-- `docs/TEAM_ROLES.md`: Responsibilities, deliverables, and ownership mapping for all five team members.
-- `docs/BRANCH_STRATEGY.md`: Git branch topology, naming conventions, pull request rules, and release gates.
-- `docs/FEATURES.md`: Current functional feature matrix (Working, Partially Working, Broken, Missing, Needs Verification).
-- `docs/ROADMAP.md`: Development roadmap spanning Phase 0 through Phase 9 with blockers and status.
-- `HANDOFF.md`: Handoff documentation for continuity.
-- `PHASE-LOG.md`: Chronological log of phase execution, test results, and milestones.
-- `.gitignore`: Ignoring `.venv/`, `*.pyc`, `app.db`, `test_app.db`, cache, and user runtime artifacts.
+### New Core Modules (`core/`):
+- `core/__init__.py`: Package exports for core engine components.
+- `core/state.py`: `MacroState` enum (`IDLE`, `STARTING`, `RUNNING`, `PAUSED`, `STOPPING`, `STOPPED`, `ERROR`), `StateManager` thread-safe transitions.
+- `core/events.py`: `EventBus` pub/sub dispatcher for decoupling bot and UI layers.
+- `core/task.py`: `CancellationToken` with interruptible wait, emergency stop, and cleanup hooks.
+- `core/input.py`: `InputManager`, `Win32InputDriver`, `MockInputDriver`, failsafe check at (0, 0), guaranteed `release_all()`.
+- `core/engine.py`: `MacroEngine` lifecycle orchestrator preventing duplicate tasks and managing cancellation.
 
-### Files Preserved Unchanged:
-- All source code files (`fisch_macro.py`, `ui_kit.py`, `main.py`, `service.py`, `database.py`, `security.py`, `sheets.py`, `view_database.py`, `google_apps_script.js`, `settings.py`, `settings.json`, `settings.example.json`, batch scripts) have been preserved completely without any destructive edits.
+### New Test Suites (`tests/`):
+- `tests/test_core.py`: 9 unit tests for state transitions, event bus, cancellation token, mock input, and engine lifecycle.
+- `tests/test_vision_math.py`: 5 unit tests for color masking, run-length clustering (`runs_of`), candidate selection (`choose`), and `Track` EMA velocity estimation.
+- `tests/test_service_compat.py`: Pytest wrapper executing all 10 baseline service tests.
+
+### Modified Files:
+- `fisch_macro.py`: Replaced monolithic Win32 ctypes block with `core.input` imports; guarded Windows precision timers with `if sys.platform == "win32"`; added guaranteed `input_manager.release_all()` in `finally`.
+- `docs/FEATURES.md`: Updated platform independence and automated test statuses to Working.
+- `docs/ROADMAP.md`: Marked Phase 2 as completed and blocker B-01 resolved.
+- `PHASE-LOG.md`: Added detailed Phase 2 execution entry.
 
 ---
 
 ## 4. Tests Executed & Actual Results
 
-### Automated Backend Tests:
-- Command: `.venv/bin/python test_service.py`
-- Environment: Python 3.12.9 in isolated `.venv`
-- Result: **10/10 PASS**
-  1. `[PASS] สมัครสมาชิกคนแรกเป็น admin`
-  2. `[PASS] ป้องกันชื่อผู้ใช้ซ้ำ`
-  3. `[PASS] สมัครสมาชิกคนที่สองเป็น user`
-  4. `[PASS] ปฏิเสธรหัสผ่านผิด`
-  5. `[PASS] ล็อกอินสำเร็จและได้ token`
-  6. `[PASS] ดึงข้อมูลผู้ใช้ปัจจุบัน (current_user) สำเร็จ`
-  7. `[PASS] export_users_rows ปลอดภัยและถูกต้อง`
-  8. `[PASS] ระงับบัญชีผู้ใช้สำเร็จ`
-  9. `[PASS] ปลดระงับสำเร็จ`
-  10. `[PASS] ลืมรหัสผ่านด้วย nickname + birthday สำเร็จ`
+### Automated Pytest Suite:
+Command: `.venv/bin/pytest tests/ -v`
+```
+tests/test_core.py::test_macro_state_transitions PASSED
+tests/test_core.py::test_invalid_state_transition PASSED
+tests/test_core.py::test_state_change_listeners PASSED
+tests/test_core.py::test_event_bus PASSED
+tests/test_core.py::test_cancellation_token_interruptible_wait PASSED
+tests/test_core.py::test_cancellation_cleanup_hooks PASSED
+tests/test_core.py::test_input_manager_mock PASSED
+tests/test_core.py::test_macro_engine_lifecycle PASSED
+tests/test_core.py::test_macro_engine_emergency_stop PASSED
+tests/test_service_compat.py::test_service_all PASSED
+tests/test_vision_math.py::test_color_mask PASSED
+tests/test_vision_math.py::test_runs_of PASSED
+tests/test_vision_math.py::test_choose PASSED
+tests/test_vision_math.py::test_track_ema PASSED
+tests/test_vision_math.py::test_centers PASSED
 
-### Module Import Tests:
-- `.venv/bin/python -c "import ui_kit"` ➔ **PASS**
-- `.venv/bin/python -c "import main"` ➔ **PASS**
-- `.venv/bin/python -c "import view_database"` ➔ **PASS**
-- `.venv/bin/python -c "import sheets"` ➔ **PASS**
-- `.venv/bin/python -c "import fisch_macro"` ➔ **FAILED on non-Windows** (`AttributeError: module 'ctypes' has no attribute 'windll'`). Windows-only import issue identified as technical debt for Phase 2.
+============================== 15 passed in 1.07s ==============================
+```
 
----
+### Standalone Backend Verification:
+Command: `.venv/bin/python test_service.py` ➔ **10/10 PASS**
 
-## 5. Known Issues & Risks
-
-1. **Unshielded Win32 Ctypes in `fisch_macro.py`**: Direct top-level access to `ctypes.windll.user32` prevents importing `fisch_macro.py` on non-Windows platforms (e.g., macOS dev environment or Linux CI). Needs platform guard/adapter.
-2. **Monolithic Macro Script**: 1,931 lines in `fisch_macro.py` combine UI, automation, networking, vision, and input. Needs phased decoupling.
-3. **No Automation Unit Tests**: Automated unit tests only exist for backend `service.py`. Unit tests for vision math (`runs_of`, `choose`) and control calculations (`Track`, PID) are needed.
+### Cross-Platform Import Verification:
+Command: `.venv/bin/python -c "import fisch_macro"` ➔ **PASS** (Zero import errors on non-Windows)
 
 ---
 
-## 6. Next Recommended Action
+## 5. Next Recommended Action
 
-1. **Commit and Merge Phase 0 & Phase 1 documentation** into `team/69030450-qa-docs` and open PR to `develop`.
-2. **Proceed to Phase 2 (Core Refactoring)** under Member 69030304 (`team/69030304-python-automation`):
-   - Encapsulate `ctypes.windll` with platform fallback / mock adapter so all non-GUI components become importable cross-platform.
-   - Separate core state machine (`MacroEngine`, `StateManager`) from Tkinter GUI.
-   - Introduce thread-safe `EventBus`.
+1. Merge `feature/69030304-core-refactoring` into `team/69030304-python-automation` and push to remote.
+2. Proceed to **Phase 3 (Fishing Automation)** under Member 69030304:
+   - Extract fishing operations (`CastOperation`, `BiteWaitOperation`, `ReelOperation`) into clean modules within an `automation/` package.
+   - Preserve existing timing, PID tuning, and sigma-delta mouse modulation.
+   - Add unit tests with synthetic frame sequences.

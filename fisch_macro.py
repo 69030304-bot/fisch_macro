@@ -42,81 +42,15 @@ try:
 except ImportError:
     winsound = None
 
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # ให้พิกัดตรงกับจอจริง
-except Exception:
-    pass
-
-user32 = ctypes.windll.user32
-
-# ---------------------------------------------------------------- SendInput (scan code)
-PUL = ctypes.POINTER(ctypes.c_ulong)
-
-
-class KeyBdInput(ctypes.Structure):
-    _fields_ = [("wVk", ctypes.c_ushort), ("wScan", ctypes.c_ushort),
-                ("dwFlags", ctypes.c_ulong), ("time", ctypes.c_ulong),
-                ("dwExtraInfo", PUL)]
-
-
-class HardwareInput(ctypes.Structure):
-    _fields_ = [("uMsg", ctypes.c_ulong), ("wParamL", ctypes.c_short),
-                ("wParamH", ctypes.c_ushort)]
-
-
-class MouseInput(ctypes.Structure):
-    _fields_ = [("dx", ctypes.c_long), ("dy", ctypes.c_long),
-                ("mouseData", ctypes.c_ulong), ("dwFlags", ctypes.c_ulong),
-                ("time", ctypes.c_ulong), ("dwExtraInfo", PUL)]
-
-
-class Input_I(ctypes.Union):
-    _fields_ = [("ki", KeyBdInput), ("mi", MouseInput), ("hi", HardwareInput)]
-
-
-class Input(ctypes.Structure):
-    _fields_ = [("type", ctypes.c_ulong), ("ii", Input_I)]
-
-
-class POINT(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
-
-
-SCAN = {"1": 0x02, "2": 0x03, "3": 0x04, "4": 0x05, "5": 0x06, "6": 0x07,
-        "7": 0x08, "8": 0x09, "9": 0x0A, "0": 0x0B, "\\": 0x2B, "enter": 0x1C}
-
-
-def _send(inp):
-    user32.SendInput(1, ctypes.pointer(inp), ctypes.sizeof(inp))
-
-
-def key_event(scan, up=False):
-    extra = ctypes.c_ulong(0)
-    ii = Input_I()
-    ii.ki = KeyBdInput(0, scan, 0x0008 | (0x0002 if up else 0), 0, ctypes.pointer(extra))
-    _send(Input(1, ii))
-
-
-def tap(name, hold=0.04):
-    scan = SCAN.get(name)
-    if scan is None:
-        return
-    key_event(scan, False)
-    time.sleep(hold)
-    key_event(scan, True)
-
-
-def mouse_button(down):
-    extra = ctypes.c_ulong(0)
-    ii = Input_I()
-    ii.mi = MouseInput(0, 0, 0, 0x0002 if down else 0x0004, 0, ctypes.pointer(extra))
-    _send(Input(0, ii))
-
-
-def cursor_pos():
-    p = POINT()
-    user32.GetCursorPos(ctypes.byref(p))
-    return p.x, p.y
+# ---------------------------------------------------------------- Hardware Input (via core.input)
+from core.input import (
+    SCAN,
+    cursor_pos,
+    input_manager,
+    key_event,
+    mouse_button,
+    tap,
+)
 
 
 # ---------------------------------------------------------------- ตั้งค่า
@@ -441,7 +375,8 @@ class Bot(threading.Thread):
     def run(self):
         try:
             try:
-                ctypes.windll.winmm.timeBeginPeriod(1)    # ให้ sleep/นาฬิกาละเอียด 1ms
+                if sys.platform == "win32":
+                    ctypes.windll.winmm.timeBeginPeriod(1)    # ให้ sleep/นาฬิกาละเอียด 1ms
             except Exception:
                 pass
             self.grabber = Grabber()
@@ -474,11 +409,12 @@ class Bot(threading.Thread):
             self.log(f"error: {e}")
         finally:
             try:
-                mouse_button(False)
+                input_manager.release_all()
             except Exception:
                 pass
             try:
-                ctypes.windll.winmm.timeEndPeriod(1)
+                if sys.platform == "win32":
+                    ctypes.windll.winmm.timeEndPeriod(1)
             except Exception:
                 pass
             self.phase = "idle"

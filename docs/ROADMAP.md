@@ -2,7 +2,7 @@
 
 **Project:** Fisch Macro  
 **Strategy:** Preserve & Refactor (Incremental Modular Evolution)  
-**Current Phase:** Phase 0 — Repository Audit (COMPLETED) ➔ Preparing Phase 1 (Architecture & Team Setup)  
+**Current Phase:** Phase 2 — Core Refactoring (COMPLETED) ➔ Next: Phase 3 (Fishing Automation)  
 **Last Updated:** 2026-11-11  
 
 ---
@@ -11,8 +11,8 @@
 
 ```mermaid
 flowchart TD
-    P0["Phase 0: Repository Audit<br/><b>[COMPLETED]</b>"] --> P1["Phase 1: Architecture & Team Setup<br/><b>[IN PROGRESS]</b>"]
-    P1 --> P2["Phase 2: Core Refactoring<br/><b>[PENDING]</b>"]
+    P0["Phase 0: Repository Audit<br/><b>[COMPLETED]</b>"] --> P1["Phase 1: Architecture & Team Setup<br/><b>[COMPLETED]</b>"]
+    P1 --> P2["Phase 2: Core Refactoring<br/><b>[COMPLETED]</b>"]
     P2 --> P3["Phase 3: Fishing Automation<br/><b>[PENDING]</b>"]
     P3 --> P4["Phase 4: Vision and Input<br/><b>[PENDING]</b>"]
     P4 --> P5["Phase 5: Database & Data Layer<br/><b>[PENDING]</b>"]
@@ -42,7 +42,7 @@ flowchart TD
 ---
 
 ### Phase 1 — Architecture and Team Setup
-- **Status:** **IN PROGRESS (Foundation Documented)**
+- **Status:** **COMPLETED**
 - **Lead Member:** 69030450 / All Members
 - **Objectives:**
   - Document target modular system architecture.
@@ -59,15 +59,22 @@ flowchart TD
 ---
 
 ### Phase 2 — Core Refactoring
-- **Status:** **PENDING**
+- **Status:** **COMPLETED**
 - **Lead Member:** 69030304 (Python Application & Automation)
 - **Collaborator:** 69030450 (QA / Docs)
 - **Objectives:**
   - Abstract application lifecycle from Tkinter event loop.
-  - Implement decoupled `StateManager` (`IDLE`, `STARTING`, `RUNNING`, `PAUSED`, `STOPPING`, `ERROR`).
+  - Implement decoupled `StateManager` (`IDLE`, `STARTING`, `RUNNING`, `PAUSED`, `STOPPING`, `STOPPED`, `ERROR`).
   - Introduce thread-safe `EventBus` for cross-module communication.
-  - Implement cooperative task cancellation and interruptible sleep.
-  - Encapsulate `ctypes.windll` to permit headless testing on macOS/Linux.
+  - Implement cooperative task cancellation and interruptible sleep (`CancellationToken`).
+  - Encapsulate `ctypes.windll` behind `InputManager` with platform guards and `MockInputDriver`.
+  - Author automated unit tests for `core` and vision math algorithms.
+- **Deliverables:**
+  - `core/` package (`state.py`, `events.py`, `task.py`, `input.py`, `engine.py`, `__init__.py`).
+  - `tests/test_core.py` (9 tests, 100% pass).
+  - `tests/test_vision_math.py` (5 tests, 100% pass).
+  - `tests/test_service_compat.py` (10 tests, 100% pass).
+  - Total automated tests: 15/15 passing.
 
 ---
 
@@ -157,6 +164,6 @@ flowchart TD
 
 | ID | Blocker / Dependency | Impacted Phases | Resolution Plan |
 |---|---|---|---|
-| **B-01** | Platform dependency (`ctypes.windll`) prevents headless automated tests on non-Windows dev environments. | Phase 2, Phase 4 | Introduce `MockInputDriver` and platform guard in Phase 2. |
+| **B-01** | Platform dependency (`ctypes.windll`) prevents headless automated tests on non-Windows dev environments. | Phase 2, Phase 4 | **RESOLVED**: Encapsulated in `core.input` with `MockInputDriver` and runtime platform detection. |
 | **B-02** | Roblox client requirement for live fishing verification. | Phase 3, Phase 4, Phase 8 | Develop synthetic frame replay harness using historical snapshots / `fisch_trace.csv`. |
 | **B-03** | Approval required before any merge into `main`. | Phase 9 | Maintain strict branching: all PRs target `develop`; maintainer explicitly approves `main`. |

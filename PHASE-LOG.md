@@ -53,3 +53,35 @@ This file tracks the formal execution of development phases, tasks, test outcome
   - All documentation verified against `AGENT.md` specifications and actual codebase.
   - Working tree verified clean with git status.
 - **Status:** **COMPLETED**
+
+## Phase 2 — Core Refactoring
+
+- **Phase:** Phase 2 — Core Refactoring
+- **Date:** 2026-11-11
+- **Responsible Member:** 69030304 (นายชยภัทร พุทธศรีเมือง — Python Application / Automation Core)
+- **Active Branch:** `feature/69030304-core-refactoring` (derived from `team/69030304-python-automation`)
+- **Task Description:**
+  - Create decoupled `core` package (`state.py`, `events.py`, `task.py`, `input.py`, `engine.py`).
+  - Implement thread-safe `StateManager` supporting the required lifecycle states: `IDLE`, `STARTING`, `RUNNING`, `PAUSED`, `STOPPING`, `STOPPED`, `ERROR`.
+  - Implement publish/subscribe `EventBus` to eliminate direct UI-to-bot tight coupling.
+  - Implement `CancellationToken` supporting cooperative interruptible sleep, emergency stops, pause/resume, and cleanup hooks.
+  - Implement `InputManager` abstracting Win32 `SendInput` and providing `MockInputDriver` for headless non-Windows test execution.
+  - Update `fisch_macro.py` to use `core.input`, eliminating top-level Win32 crashes and guaranteeing `input_manager.release_all()` on exit.
+  - Create comprehensive automated test suites in `tests/test_core.py` and `tests/test_vision_math.py`.
+- **Changes Made:**
+  - `core/state.py`: `MacroState` enum, `StateManager`, `StateTransitionError`.
+  - `core/events.py`: `EventBus`.
+  - `core/task.py`: `CancellationToken`.
+  - `core/input.py`: `InputManager`, `Win32InputDriver`, `MockInputDriver`, helper functions.
+  - `core/engine.py`: `MacroEngine` lifecycle orchestrator.
+  - `core/__init__.py`: Package exports.
+  - `fisch_macro.py`: Replaced monolithic Win32 ctypes declarations with `core.input` imports; guarded timer resolution with `sys.platform == "win32"`; added guaranteed `input_manager.release_all()`.
+  - `tests/test_core.py`: 9 unit tests for state, events, tokens, mock input, and engine.
+  - `tests/test_vision_math.py`: 5 unit tests for color masking, clustering, candidate selection, and tracking.
+  - `tests/test_service_compat.py`: Pytest wrapper for backend service tests.
+  - Updated `docs/FEATURES.md` and `docs/ROADMAP.md`.
+- **Test Results:**
+  - `pytest tests/`: **15/15 PASS** (100% passing across core, vision math, and service tests).
+  - Standalone `python test_service.py`: **10/10 PASS**.
+  - Module import `python -c "import fisch_macro"`: **PASS** (cross-platform import unlocked).
+- **Status:** **COMPLETED**
