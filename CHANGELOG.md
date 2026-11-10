@@ -4,7 +4,23 @@ All notable changes to the **Fisch Macro** project are documented in this file.
 
 ---
 
-## [1.0.0] — 2026-11-11 (Production Modular Release)
+## [1.0.1] — 2026-11-11 (Executable Delivery & CI Stabilization)
+
+### Added
+- **Automated Windows Standalone Executable Build Pipeline:**
+  - Added PyInstaller build job in `.github/workflows/ci.yml` that compiles `FischMacro.exe` (GUI Desktop App) and `FischBackend.exe` (FastAPI Server).
+  - Automatically packages executables, launcher scripts, and user documentation into `FischMacro-Windows-x64.zip`.
+  - Publishes downloadable build artifacts directly to GitHub Actions and attaches them to GitHub Releases.
+- **Standalone Usage Documentation:**
+  - Added zero-dependency `.exe` installation guide to `USER_GUIDE.md` and `README.md`.
+
+### Fixed
+- **Windows Console UTF-8 Encoding:**
+  - Configured `PYTHONIOENCODING: "utf-8"` and `PYTHONUTF8: "1"` in GitHub Actions environment.
+  - Reconfigured `sys.stdout` and `sys.stderr` in `test_service.py` to prevent Windows `cp1252` encoding crashes.
+- **Headless Linux X11 Thread Hook Abort:**
+  - Guarded `pynput.keyboard.GlobalHotKeys` initialization in `gui/dashboard.py` against CI and headless runners to prevent X11 Record extension thread aborts.
+  - Added explicit hotkey teardown in GUI test suites.
 
 ### Added
 - **Architectural Layering:**

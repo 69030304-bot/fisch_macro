@@ -5,6 +5,16 @@ test_service.py - ชุดทดสอบอัตโนมัติสำห�
 import os
 import sys
 
+# Windows console encoding safeguard for UTF-8 output
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ใช้ฐานข้อมูลทดสอบในหน่วยความจำหรือไฟล์ชั่วคราว
 TEST_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_app.db")
 if os.path.exists(TEST_DB):

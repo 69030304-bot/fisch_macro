@@ -258,9 +258,9 @@ class MacroDashboard:
         self.status_lbl.pack(side="left")
         tk.Label(sb.body, text="F7 หยุดฉุกเฉิน · F8 ถ่ายภาพ", bg=th.card, fg=th.dim, font=FONT).pack(side="right")
 
-        # Global Hotkeys
+        # Global Hotkeys (guarded in CI / headless environments to prevent X11 hook crashes)
         self.hk = None
-        if keyboard is not None:
+        if keyboard is not None and not os.environ.get("CI") and not os.environ.get("HEADLESS"):
             try:
                 self.hk = keyboard.GlobalHotKeys({
                     "<f6>": lambda: self.root.after(0, self.toggle),

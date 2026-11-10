@@ -138,7 +138,15 @@ fisch-project/
 
 ## 4. เริ่มต้นใช้งานแบบเร่งด่วน (Quick Start)
 
-### วิธีที่ 1: ใช้งานผ่าน Batch Scripts บน Windows (แนะนำ)
+### วิธีที่ 0: ใช้งานโปรแกรมสำเร็จรูป (.exe Standalone) — แนะนำ (ไม่ต้องติดตั้ง Python)
+1. ไปที่หน้า **[Releases](../../releases)** หรือแท็บ **Actions → Artifacts** บน GitHub
+2. ดาวน์โหลดไฟล์ **`FischMacro-Windows-x64.zip`** และแตกไฟล์ลงบนโฟลเดอร์ในเครื่อง
+3. ดับเบิลคลิกเปิด **`FischBackend.exe`** (เซิร์ฟเวอร์ระบบสมาชิกและฐานข้อมูล — เปิดทิ้งไว้)
+4. ดับเบิลคลิกเปิด **`FischMacro.exe`** (แนะนำคลิกขวาเลือก *Run as administrator*)
+
+---
+
+### วิธีที่ 1: ใช้งานผ่าน Batch Scripts บน Windows (ผ่าน Python Virtual Environment)
 1. **ติดตั้งครั้งแรก:** ดับเบิลคลิก **`setup.bat`** (ติดตั้ง Python venv และไลบรารีให้อัตโนมัติ)
 2. **เปิดเซิร์ฟเวอร์:** ดับเบิลคลิก **`start_backend.bat`** (เปิดทิ้งไว้)
 3. **เปิดแอป:** ดับเบิลคลิก **`start_app.bat`** (เข้าสู่ระบบและเริ่มใช้งาน)
